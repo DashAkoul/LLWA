@@ -99,13 +99,21 @@ export interface SubscriptionInfo {
 
 export interface UserProfile {
   id: string;
-  telegramId: number;
+  /**
+   * شناسهٔ تلگرام — فقط اگر کاربر از ربات آمده باشد.
+   * در اپ موبایل (ورود با گوگل) این مقدار `null` است.
+   */
+  telegramId: number | null;
+  /** ایمیل حساب گوگل (اگر با گوگل وارد شده باشد) */
+  email?: string | null;
+  /** روش ورود کاربر */
+  authProvider?: 'GOOGLE' | 'TELEGRAM';
   firstName: string | null;
   lastName: string | null;
   username: string | null;
   photoUrl: string | null;
   uiLanguage: SupportedUiLanguage;
-  languageSource: 'TELEGRAM' | 'MANUAL';
+  languageSource: 'TELEGRAM' | 'MANUAL' | 'GOOGLE';
   targetLanguage: SupportedTargetLanguage;
   /** گویش انتخابی مثل en-US (اختیاری) */
   dialect?: string | null;
@@ -475,7 +483,10 @@ export interface StarInvoice {
 
 export interface AdminUserSummary {
   id: string;
-  telegramId: number;
+  /** برای کاربران اپ موبایل (ورود با گوگل) `null` است */
+  telegramId: number | null;
+  /** ایمیل — برای کاربران گوگل */
+  email?: string | null;
   displayName: string;
   username: string | null;
   /** زبان رابط کاربر — مدیر برای نوشتن پیام به زبان همان کاربر لازم دارد */
@@ -673,7 +684,9 @@ export type ApiErrorCode =
   | 'NOT_FOUND'
   | 'VALIDATION_ERROR'
   | 'INTERNAL_ERROR'
-  | 'AI_UNAVAILABLE';
+  | 'AI_UNAVAILABLE'
+  | 'INVALID_GOOGLE_TOKEN'
+  | 'SERVER_MISCONFIGURED';
 
 /** یک واژه در لیست‌های «تثبیت‌شده» / «در حال یادگیری» */
 export interface WordListEntry {

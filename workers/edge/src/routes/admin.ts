@@ -17,8 +17,9 @@ import { SupabaseClient } from '../services/supabase';
 
 export function isAdminFromEnv(
   env: RequestContext['env'],
-  telegramId: number
+  telegramId?: number | null
 ): boolean {
+  if (typeof telegramId !== 'number' || !Number.isFinite(telegramId)) return false;
   const ids = (env.TELEGRAM_ADMIN_IDS ?? '')
     .split(',')
     .map((s) => s.trim())
@@ -201,10 +202,13 @@ export async function handleAdminGift(
     });
   }
 
-  // اطلاع‌رسانی به کاربر از طریق ربات (اختیاری و غیرحیاتی)
-  context.waitUntil?.(
-    notifyUserOfGift(env, target.telegram_id, planType, subscription.expires_at)
-  );
+  // اطلاع‌رسانی به کاربر از طریق ربات (اختیاری و غیرحیاتی).
+  // ⚠️ کاربران اپ موبایل telegram_id ندارند → اعلان ربات برایشان ممکن نیست.
+  if (typeof target.telegram_id === 'number') {
+    context.waitUntil?.(
+      notifyUserOfGift(env, target.telegram_id, planType, subscription.expires_at)
+    );
+  }
 
   return jsonSuccess(
     {

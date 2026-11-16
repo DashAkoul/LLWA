@@ -10,7 +10,13 @@ import { resolveRoute, authenticate } from './middleware/auth';
 import { enforceRateLimit } from './middleware/rate-limit';
 import { scanPayloadForInjection } from './middleware/content-filter';
 
-import { handleAuth, handleAuthLink, handleMe, handleHealth } from './routes/auth';
+import {
+  handleAuth,
+  handleAuthGoogle,
+  handleAuthLink,
+  handleMe,
+  handleHealth,
+} from './routes/auth';
 import {
   handleHome,
   handleGetTodayLesson,
@@ -396,6 +402,8 @@ async function dispatch(
     // auth & profile
     case 'auth':
       return handleAuth(request, context);
+    case 'auth-google':
+      return handleAuthGoogle(request, context);
     case 'auth-link':
       return handleAuthLink(request, context);
     case 'me':

@@ -250,8 +250,10 @@ async function adminGift(
       .join('\n')
   );
 
-  // اطلاع‌رسانی به کاربر
-  await notifyGift(env, target.telegram_id, planType, expiry);
+  // اطلاع‌رسانی به کاربر — فقط اگر حساب تلگرام داشته باشد
+  if (typeof target.telegram_id === 'number') {
+    await notifyGift(env, target.telegram_id, planType, expiry);
+  }
 }
 
 async function adminUser(

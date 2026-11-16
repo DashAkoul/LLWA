@@ -42,6 +42,7 @@ export function resolveRoute(url: URL): RouteMeta {
 function routeClassForAction(action: string): RouteClass {
   switch (action) {
     case 'auth':
+    case 'auth-google':
     case 'auth-link':
     case 'health':
     case 'plans':
@@ -186,7 +187,7 @@ export async function authenticate(
   const claims = verified.payload!;
 
   if (routeClass === 'ADMIN') {
-    const role = await resolveAdminRole(claims.telegramId, env);
+    const role = await resolveAdminRole(claims, env);
     if (!role) {
       return {
         context: base,
@@ -212,6 +213,8 @@ export async function authenticate(
         ...base,
         claims,
         telegramId: claims.telegramId,
+        googleSub: claims.googleSub,
+        email: claims.email,
         userId: claims.userId,
         adminRole: role,
       },
@@ -219,26 +222,54 @@ export async function authenticate(
   }
 
   return {
-    context: { ...base, claims, telegramId: claims.telegramId, userId: claims.userId },
+    context: {
+      ...base,
+      claims,
+      telegramId: claims.telegramId,
+      googleSub: claims.googleSub,
+      email: claims.email,
+      userId: claims.userId,
+    },
   };
 }
 
 /**
  * نقش ادمین کاربر را تعیین می‌کند.
- *  ۱. اگر در TELEGRAM_ADMIN_IDS باشد → SUPER_ADMIN
- *  ۲. وگرنه نقش ذخیره‌شده در دیتابیس (`users.admin_role`) بررسی می‌شود
+ *  ۱. اگر ایمیلش در `ADMIN_EMAILS` باشد → SUPER_ADMIN (مسیر اپ موبایل)
+ *  ۲. اگر telegramId در `TELEGRAM_ADMIN_IDS` باشد → SUPER_ADMIN (مسیر ربات)
+ *  ۳. وگرنه نقش ذخیره‌شده در دیتابیس (`users.admin_role`)
+ *
+ * ⚠️ جست‌وجوی دیتابیس با `userId` انجام می‌شود، نه telegram_id — چون
+ * کاربران اپ موبایل telegram_id ندارند.
  */
-async function resolveAdminRole(telegramId: number, env: Env): Promise<AdminRole | null> {
-  const ids = (env.TELEGRAM_ADMIN_IDS ?? '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map(Number);
-  if (ids.includes(telegramId)) return 'SUPER_ADMIN';
+async function resolveAdminRole(
+  claims: AuthClaims,
+  env: Env
+): Promise<AdminRole | null> {
+  const email = (claims.email ?? '').toLowerCase();
+  if (email) {
+    const adminEmails = (env.ADMIN_EMAILS ?? '')
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    if (adminEmails.includes(email)) return 'SUPER_ADMIN';
+  }
+
+  const telegramId = claims.telegramId;
+  if (typeof telegramId === 'number') {
+    const ids = (env.TELEGRAM_ADMIN_IDS ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map(Number);
+    if (ids.includes(telegramId)) return 'SUPER_ADMIN';
+  }
+
+  if (!claims.userId) return null;
 
   try {
     const res = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/users?telegram_id=eq.${telegramId}&select=admin_role&limit=1`,
+      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${encodeURIComponent(claims.userId)}&select=admin_role&limit=1`,
       {
         headers: {
           apikey: env.SUPABASE_SERVICE_ROLE_KEY ?? '',
