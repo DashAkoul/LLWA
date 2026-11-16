@@ -456,7 +456,7 @@ export const PROMPT_INJECTION_PATTERNS: readonly RegExp[] = [
   /pretend\s+(to\s+be|you\s+are)/i,
 ];
 
-export const DEFAULT_GATE_PATH = '/kpanah56/8fjg7rfb/v1/gate';
+export const DEFAULT_GATE_PATH = '/llwa74/9xkr2mqv/v1/gate';
 
 // ─────────────────────────────────────────────────────────────────────
 // AI provider presets

@@ -81,7 +81,7 @@ BotFather یک عکس می‌خواهد. می‌توانید فعلاً `/empty`
 این را **دقیقاً** و با `https://` بفرستید:
 
 ```
-https://kpanah-lang.pages.dev
+https://llwa.pages.dev
 ```
 
 ### مرحله ۸ — نام کوتاه (Short Name)
@@ -89,10 +89,10 @@ https://kpanah-lang.pages.dev
 یک اسم کوچک انگلیسی، فقط حروف و عدد (بدون فاصله). مثلاً:
 
 ```
-kpanahlang
+llwahlang
 ```
 
-> این همان چیزی است که در لینک `t.me/AILanguageEducationbot/kpanahlang`
+> این همان چیزی است که در لینک `t.me/AILanguageEducationbot/llwahlang`
 > استفاده می‌شود.
 
 ### مرحله ۹ — تأیید
@@ -118,7 +118,7 @@ Success! The Mini App was added.
 ### راه ۲ — لینک مستقیم
 
 ```
-https://t.me/AILanguageEducationbot/kpanahlang
+https://t.me/AILanguageEducationbot/llwahlang
 ```
 
 ### راه ۳ — دستور `/start`
@@ -131,7 +131,7 @@ https://t.me/AILanguageEducationbot/kpanahlang
 
 ### ❌ هرگز این کار را نکنید
 
-به‌جای موارد بالا، آدرس `https://kpanah-lang.pages.dev` را **مستقیم در
+به‌جای موارد بالا، آدرس `https://llwa.pages.dev` را **مستقیم در
 مرورگر یا داخل چت** باز نکنید — بدون امضای تلگرام کار نمی‌کند.
 
 ---
@@ -160,7 +160,7 @@ https://t.me/AILanguageEducationbot/kpanahlang
 این یعنی قبلاً ثبت شده اما برای **ربات دیگری**. راه‌حل:
 
 1. `/myapps` را در BotFather بزنید
-2. ببینید `kpanah-lang.pages.dev` روی کدام ربات است
+2. ببینید `llwa.pages.dev` روی کدام ربات است
 3. یا آن را از ربات اشتباه حذف کنید (`/deleteapp`)، یا یک آدرس متفاوت بسازید
 
 ---

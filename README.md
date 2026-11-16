@@ -1,4 +1,4 @@
-# کپناه لهجه — Adaptive AI Language Tutor
+# LLWA لهجه — Adaptive AI Language Tutor
 
 A **serverless, adaptive AI language tutor** delivered as a **Telegram Mini App**.
 No VPS, no containers, no n8n — the entire backend runs on Cloudflare's edge plus
@@ -115,7 +115,7 @@ implemented and accepted:
 | Transport | TLS 1.3, enforced by Cloudflare |
 | Identity | `initData` HMAC-SHA256 validation, reconstructed `data_check_string`, timing-safe comparison, 24 h freshness window |
 | Session | Short-lived HS256 JWT (15 min) signed in the Worker, held in memory + `sessionStorage` |
-| Routing | Single obfuscated gate path (`/kpanah56/8fjg7rfb/v1/gate`), `?action=` dispatch, unknown paths return a bare 404 |
+| Routing | Single obfuscated gate path (`/llwa74/9xkr2mqv/v1/gate`), `?action=` dispatch, unknown paths return a bare 404 |
 | Abuse | Dual-window rate limiting (per-minute per-IP, per-day per-user) backed by KV |
 | Prompt safety | 13 injection patterns, zero-width character detection, recursive payload scanning, untrusted text wrapped before reaching the model |
 | Data | Row Level Security on every table; the client can only read its own rows |
@@ -232,7 +232,7 @@ Either path notifies the recipient in Telegram.
 
 ```bash
 npm test          # from the repo root, or:
-npm run test -w @kpanah/shared
+npm run test -w @llwa/shared
 ```
 
 66 tests cover the parts where a bug would be silent and expensive:

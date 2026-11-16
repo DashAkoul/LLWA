@@ -1,6 +1,6 @@
 import type { Env, RequestContext } from '../types';
 import { jsonSuccess, readJson } from '../lib/response';
-import { buildStartParam } from '@kpanah/shared';
+import { buildStartParam } from '@llwa/shared';
 import { fulfilStarPayment } from './store';
 import { generateLinkToken, storeLinkToken } from '../lib/link-token';
 import { ContentRepository } from '../services/repository';

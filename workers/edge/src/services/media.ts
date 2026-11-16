@@ -140,7 +140,7 @@ export async function storeAudio(
 
 /** لینک سرو کردن فایل — از route خودمان (باکس Private است) */
 export function mediaUrl(env: Env, storageKey: string): string {
-  const base = env.MEDIA_URL_BASE ?? '/kpanah56/8fjg7rfb/v1/media';
+  const base = env.MEDIA_URL_BASE ?? '/llwa74/9xkr2mqv/v1/media';
   return `${base}/${storageKey}`;
 }
 

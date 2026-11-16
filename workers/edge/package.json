@@ -1,5 +1,5 @@
 {
-  "name": "@kpanah/edge",
+  "name": "@llwa/edge",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
     "tail": "wrangler tail"
   },
   "dependencies": {
-    "@kpanah/shared": "*",
+    "@llwa/shared": "*",
     "aws4fetch": "^1.0.20",
     "zod": "^3.23.8"
   },

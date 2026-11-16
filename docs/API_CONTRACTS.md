@@ -1,7 +1,7 @@
 # قراردادهای API — دروازه رمزنگاری‌شده
 
 > همه مسیرها از یک دروازه واحد عبور می‌کنند (مبهم‌سازی مسیر):
-> `POST {API_BASE}/kpanah56/8fjg7rfb/v1/gate?action=<NAME>`
+> `POST {API_BASE}/llwa74/9xkr2mqv/v1/gate?action=<NAME>`
 
 ## قواعد عمومی
 

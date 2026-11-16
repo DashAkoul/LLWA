@@ -1,5 +1,5 @@
-import { authRequestSchema, authLinkRequestSchema } from '@kpanah/shared';
-import { SECURITY, languageFromTelegramCode } from '@kpanah/shared';
+import { authRequestSchema, authLinkRequestSchema } from '@llwa/shared';
+import { SECURITY, languageFromTelegramCode } from '@llwa/shared';
 import type { Env, RequestContext } from '../types';
 import { jsonError, jsonSuccess, readJson } from '../lib/response';
 import { validateInitData } from '../lib/telegram-auth';

@@ -1,5 +1,5 @@
-import { PLAN_DURATION_DAYS, PLAN_DEFINITIONS } from '@kpanah/shared';
-import type { PlanType } from '@kpanah/shared';
+import { PLAN_DURATION_DAYS, PLAN_DEFINITIONS } from '@llwa/shared';
+import type { PlanType } from '@llwa/shared';
 import type { Env, RequestContext } from '../types';
 import { jsonSuccess, readJson } from '../lib/response';
 import { ContentRepository } from '../services/repository';

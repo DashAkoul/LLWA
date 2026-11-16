@@ -3,7 +3,7 @@ import {
   updateAiProviderSchema,
   reorderAiProvidersSchema,
   validateWithDetail,
-} from '@kpanah/shared';
+} from '@llwa/shared';
 import type { RequestContext } from '../types';
 import { jsonError, jsonSuccess, readJson } from '../lib/response';
 import { ContentRepository } from '../services/repository';

@@ -1,4 +1,4 @@
-# 🚀 گزارش دیپلوی — Kpanah Lang
+# 🚀 گزارش دیپلوی — LLWA Lang
 
 > وضعیت: **زنده در production** · تاریخ: ۲۰۲۶-۱۰-۱۱
 > حساب Cloudflare: `akouldash@outlook.com`
@@ -9,8 +9,8 @@
 
 | سرویس | آدرس |
 |---|---|
-| **Mini App (فرانت‌اند)** | https://kpanah-lang.pages.dev |
-| **Edge API (Worker)** | https://kpanah-lang-edge.language-app-backend.workers.dev |
+| **Mini App (فرانت‌اند)** | https://llwa.pages.dev |
+| **Edge API (Worker)** | https://llwa-edge.language-app-backend.workers.dev |
 | **Supabase (دیتابیس)** | پروژه شخصی شما (`SUPABASE_URL` در `.env`) |
 
 ### مسیر دروازه (مبهم‌سازی‌شده)
@@ -18,12 +18,12 @@
 تمام فراخوانی‌های API از این مسیر عبور می‌کنند:
 
 ```
-https://kpanah-lang-edge.language-app-backend.workers.dev/kpanah56/8fjg7rfb/v1/gate?action=<ACTION>
+https://llwa-edge.language-app-backend.workers.dev/llwa74/9xkr2mqv/v1/gate?action=<ACTION>
 ```
 
 سلامت‌سنجی:
 ```bash
-curl "https://kpanah-lang-edge.language-app-backend.workers.dev/kpanah56/8fjg7rfb/v1/gate?action=health"
+curl "https://llwa-edge.language-app-backend.workers.dev/llwa74/9xkr2mqv/v1/gate?action=health"
 ```
 
 ---
@@ -53,7 +53,7 @@ curl "https://kpanah-lang-edge.language-app-backend.workers.dev/kpanah56/8fjg7rf
 ## ۳. منابع Cloudflare ساخته‌شده
 
 ```
-Worker:  kpanah-lang-edge
+Worker:  llwa-edge
 Version: 239f21b6-8035-4326-b507-ff4b109e28fe
 Bundle:  353.58 KiB  /  68.60 KiB gzip
 Startup: 21 ms
@@ -63,8 +63,8 @@ KV:
   CACHE_KV      → 49474852f40b480d8acaf20becbc792c
 
 Pages:
-  Project  kpanah-lang
-  Domain   kpanah-lang.pages.dev
+  Project  llwa
+  Domain   llwa.pages.dev
   Deploy   3e9fe175  (branch: main)
 
 Cron:
@@ -79,9 +79,9 @@ Cron:
 
 | متغیر | مقدار |
 |---|---|
-| `MINI_APP_URL` | `https://kpanah-lang.pages.dev` |
-| `SELF_URL` | `https://kpanah-lang-edge.language-app-backend.workers.dev` |
-| `GATE_PATH` | `/kpanah56/8fjg7rfb/v1/gate` |
+| `MINI_APP_URL` | `https://llwa.pages.dev` |
+| `SELF_URL` | `https://llwa-edge.language-app-backend.workers.dev` |
+| `GATE_PATH` | `/llwa74/9xkr2mqv/v1/gate` |
 | `AI_PRIMARY_MODEL` | `gemini-2.5-flash` |
 | `AI_FALLBACK_MODELS` | `deepseek-chat,claude-3-5-sonnet-latest` |
 | `ENABLE_PAYLOAD_ENCRYPTION` | `false` |
@@ -189,15 +189,15 @@ npx wrangler deploy -c workers/edge/wrangler.toml
 
 # بیلد + دیپلوی مجدد فرانت‌اند
 cd apps/tma
-VITE_API_BASE="https://kpanah-lang-edge.language-app-backend.workers.dev" \
+VITE_API_BASE="https://llwa-edge.language-app-backend.workers.dev" \
   npm run build
-npx wrangler pages deploy dist --project-name=kpanah-lang
+npx wrangler pages deploy dist --project-name=llwa
 
 # لاگ زنده Worker
-npx wrangler tail kpanah-lang-edge
+npx wrangler tail llwa-edge
 
 # لیست deployment های Pages
-npx wrangler pages deployment list --project-name=kpanah-lang
+npx wrangler pages deployment list --project-name=llwa
 ```
 
 ---

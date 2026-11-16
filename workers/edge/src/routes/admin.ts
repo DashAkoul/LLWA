@@ -1,4 +1,4 @@
-import { adminGiftSchema, planUpsertSchema, PLAN_DURATION_DAYS } from '@kpanah/shared';
+import { adminGiftSchema, planUpsertSchema, PLAN_DURATION_DAYS } from '@llwa/shared';
 import type { RequestContext } from '../types';
 import { jsonError, jsonSuccess, readJson } from '../lib/response';
 import { ContentRepository } from '../services/repository';

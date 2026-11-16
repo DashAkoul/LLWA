@@ -12,7 +12,7 @@
 
 **`VITE_API_BASE` در build تولید (production) ست نشده بود** → تمام درخواست‌های
 API کلاینت **نسبی (relative)** می‌شدند و به اوریجین Pages
-(`kpanah-lang.pages.dev`) زده می‌شدند. چون `_redirects` مسیر `/kpanah56/.../gate`
+(`llwa.pages.dev`) زده می‌شدند. چون `_redirects` مسیر `/llwa74/.../gate`
 ندارد، Pages **404 با بدنه HTML** برمی‌گرداند → `response.json()` روی کلاینت
 می‌شکند → `errors.server_error` = «Temporary server issue».
 
@@ -26,7 +26,7 @@ JWT round-trip، CORS preflight همه OK). مشکل فقط اتصال کلای�
 **رفع:**
 1. مقدار پیش‌فرض دفاعی در `apps/tma/src/lib/api.ts` (اگر `VITE_API_BASE` ست
    نشده باشد، به URL عمومی Worker وصل شود).
-2. rebuild تولید با `VITE_API_BASE="https://kpanah-lang-edge.language-app-backend.workers.dev"`
+2. rebuild تولید با `VITE_API_BASE="https://llwa-edge.language-app-backend.workers.dev"`
    و redeploy روی Pages (طبق `SETUP_GUIDE.md:448`).
 3. حذف endpoint دیاگنوستیک موقت و پاک‌سازی ردیف‌های تستی.
 
@@ -44,7 +44,7 @@ JWT round-trip، CORS preflight همه OK). مشکل فقط اتصال کلای�
 **ریشه:** توکن این‌طور به URL اضافه می‌شد:
 
 ```
-https://kpanah-lang.pages.dev?t=<token>
+https://llwa.pages.dev?t=<token>
                               ^^^^^^^^^^^^
 ```
 
@@ -57,7 +57,7 @@ https://kpanah-lang.pages.dev?t=<token>
 **رفع:** تنها مسیر قابل‌اعتماد، `startapp` است:
 
 ```
-url: "https://kpanah-lang.pages.dev?startapp=t_<token>"
+url: "https://llwa.pages.dev?startapp=t_<token>"
         ↓ تلگرام تبدیل می‌کند
 tgWebAppStartParam = "t_<token>"
         ↓ SDK
@@ -180,7 +180,7 @@ signJwt({ telegramId: tgUser.id, userId: user.id, uiLanguage: ... })
 | همان پیام «Connection failed» | دکمه قدیمی را زده‌اید | `/start` بفرستید، دکمه **جدید** را بزنید |
 | صفحه سفید / گیر در Loading | کش مرورگر | اپ را ببندید و از نو باز کنید |
 
-**نکته:** لینک `https://kpanah-lang.pages.dev` را **مستقیم در مرورگر
+**نکته:** لینک `https://llwa.pages.dev` را **مستقیم در مرورگر
 باز نکنید** — بدون توکن کار نمی‌کند. همیشه از دکمه داخل ربات وارد شوید.
 
 ---

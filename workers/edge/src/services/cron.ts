@@ -86,7 +86,7 @@ export async function runHourlyMaintenance(
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: Number(id),
-            text: `⚠️ کپناه: ${failures} تلاش ناموفق AI در یک ساعت گذشته. providers را در پنل بررسی کن.`,
+            text: `⚠️ LLWA: ${failures} تلاش ناموفق AI در یک ساعت گذشته. providers را در پنل بررسی کن.`,
           }),
         }).catch(() => undefined);
       }

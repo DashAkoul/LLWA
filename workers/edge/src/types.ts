@@ -87,7 +87,7 @@ export interface Env {
   // اختیاری: اگر پیکربندی نشود، صوت تولید نمی‌شود ولی بقیهٔ اپ کار می‌کند.
   /** endpoint مثل `https://s3.eu-central-003.backblazeb2.com` */
   MEDIA_S3_ENDPOINT?: string;
-  /** نام باکس، مثل `kpanah-media` */
+  /** نام باکس، مثل `llwa-media` */
   MEDIA_S3_BUCKET?: string;
   /** منطقه (اختیاری — از endpoint استخراج می‌شود) */
   MEDIA_S3_REGION?: string;

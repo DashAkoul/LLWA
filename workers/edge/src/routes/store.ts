@@ -1,5 +1,5 @@
-import { purchasePlanSchema } from '@kpanah/shared';
-import type { Plan } from '@kpanah/shared';
+import { purchasePlanSchema } from '@llwa/shared';
+import type { Plan } from '@llwa/shared';
 import type { RequestContext } from '../types';
 import { jsonError, jsonSuccess, readJson } from '../lib/response';
 import { ContentRepository } from '../services/repository';

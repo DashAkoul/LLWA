@@ -17,7 +17,7 @@ import type {
   QualitativeSkill,
   TermCard,
   LearningMap,
-} from '@kpanah/shared';
+} from '@llwa/shared';
 import {
   CYCLE_LENGTH_DAYS,
   PLAN_DURATION_DAYS,
@@ -28,7 +28,7 @@ import {
   evaluateAccess,
   lessonKindForDay,
   shouldGenerateNextCycle,
-} from '@kpanah/shared';
+} from '@llwa/shared';
 import { SupabaseClient, SupabaseError } from './supabase';
 import type { AiProviderRow } from './ai-engine';
 import type { Env } from '../types';

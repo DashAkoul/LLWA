@@ -18,7 +18,7 @@
 
 | فیلد | مقدار پیشنهادی |
 |---|---|
-| Name | `kpanah-lang` |
+| Name | `llwa` |
 | Database Password | یک رمز قوی — **جایی ذخیره کنید** |
 | Region | نزدیک‌ترین به کاربران (برای ایران: `Frankfurt` یا `Bahrain`) |
 | Pricing Plan | Free کافی است برای شروع |
@@ -118,8 +118,8 @@ select plan_type, price_stars, badge from plans order by duration_days;
 
 1. در تلگرام به **@BotFather** پیام دهید
 2. دستور `/newbot`
-3. نام نمایشی را وارد کنید (مثلاً `کپناه لهجه`)
-4. یوزرنیم را وارد کنید — باید به `bot` ختم شود (مثلاً `kpanah_lang_bot`)
+3. نام نمایشی را وارد کنید (مثلاً `LLWA لهجه`)
+4. یوزرنیم را وارد کنید — باید به `bot` ختم شود (مثلاً `llwa_bot`)
 5. **توکن** را کپی کنید:
    ```
    1234567890:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw
@@ -131,8 +131,8 @@ select plan_type, price_stars, badge from plans order by duration_days;
 برای امنیت، ربات ادمین **جدا** از ربات کاربر است.
 
 1. دوباره `/newbot`
-2. نام: `کپناه لهجه — ادمین`
-3. یوزرنیم: `kpanah_admin_bot`
+2. نام: `LLWA لهجه — ادمین`
+3. یوزرنیم: `llwa_admin_bot`
 4. توکن را کپی کنید → این می‌شود `TELEGRAM_ADMIN_BOT_TOKEN`
 
 ## ۲.۳ گرفتن Telegram ID خودتان (برای ادمین شدن)
@@ -168,7 +168,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
   -H "Content-Type: application/json" \
   -d '{
-    "url": "https://kpanah-lang-edge.language-app-backend.workers.dev/kpanah56/8fjg7rfb/v1/gate/telegram/webhook",
+    "url": "https://llwa-edge.language-app-backend.workers.dev/llwa74/9xkr2mqv/v1/gate/telegram/webhook",
     "secret_token": "<TELEGRAM_WEBHOOK_SECRET>",
     "allowed_updates": ["message", "pre_checkout_query", "successful_payment"]
   }'
@@ -177,7 +177,7 @@ curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
 curl -X POST "https://api.telegram.org/bot<TELEGRAM_ADMIN_BOT_TOKEN>/setWebhook" \
   -H "Content-Type: application/json" \
   -d '{
-    "url": "https://kpanah-lang-edge.language-app-backend.workers.dev/kpanah56/8fjg7rfb/v1/gate/telegram/admin-webhook",
+    "url": "https://llwa-edge.language-app-backend.workers.dev/llwa74/9xkr2mqv/v1/gate/telegram/admin-webhook",
     "secret_token": "<TELEGRAM_WEBHOOK_SECRET>"
   }'
 ```
@@ -307,7 +307,7 @@ QStash باعث می‌شود تولید چرخه جدید (که ممکن است
 فقط یک Destination لازم است که به ورکر شما اشاره کند:
 
 ```
-https://kpanah-lang-edge.language-app-backend.workers.dev/kpanah56/8fjg7rfb/v1/gate/internal/queue?internal=generate-cycle
+https://llwa-edge.language-app-backend.workers.dev/llwa74/9xkr2mqv/v1/gate/internal/queue?internal=generate-cycle
 ```
 
 > **اگر QStash را تنظیم نکنید:** برنامه همچنان کار می‌کند، اما تولید چرخه جدید
@@ -394,16 +394,16 @@ npx wrangler secret list
 ## ۶.۱ دیپلوی Worker
 
 ```bash
-npm run build -w @kpanah/edge
+npm run build -w @llwa/edge
 npx wrangler deploy -c workers/edge/wrangler.toml
 ```
 
 خروجی چیزی شبیه این است:
 
 ```
-Uploaded kpanah-lang-edge (3.42 sec)
-Published kpanah-lang-edge
-  https://kpanah-lang-edge.language-app-backend.workers.dev
+Uploaded llwa-edge (3.42 sec)
+Published llwa-edge
+  https://llwa-edge.language-app-backend.workers.dev
 ```
 
 **این URL را کپی کنید** — در مراحل بعد لازم است.
@@ -414,8 +414,8 @@ Published kpanah-lang-edge
 
 ```toml
 [vars]
-SELF_URL = "https://kpanah-lang-edge.language-app-backend.workers.dev"
-MINI_APP_URL = "https://kpanah-lang.pages.dev"
+SELF_URL = "https://llwa-edge.language-app-backend.workers.dev"
+MINI_APP_URL = "https://llwa.pages.dev"
 ```
 
 و دوباره دیپلوی کنید:
@@ -427,7 +427,7 @@ npx wrangler deploy -c workers/edge/wrangler.toml
 ## ۶.۳ تست سلامت ورکر
 
 ```bash
-curl "https://kpanah-lang-edge.language-app-backend.workers.dev/kpanah56/8fjg7rfb/v1/gate?action=health"
+curl "https://llwa-edge.language-app-backend.workers.dev/llwa74/9xkr2mqv/v1/gate?action=health"
 ```
 
 انتظار:
@@ -445,16 +445,16 @@ curl "https://kpanah-lang-edge.language-app-backend.workers.dev/kpanah56/8fjg7rf
 ```bash
 # build با URL واقعی ورکر
 cd apps/tma
-VITE_API_BASE="https://kpanah-lang-edge.language-app-backend.workers.dev" npm run build
+VITE_API_BASE="https://llwa-edge.language-app-backend.workers.dev" npm run build
 
 # deploy
-npx wrangler pages deploy dist --project-name=kpanah-lang
+npx wrangler pages deploy dist --project-name=llwa
 ```
 
 خروجی URL می‌دهد:
 
 ```
-https://kpanah-lang.pages.dev
+https://llwa.pages.dev
 ```
 
 ### راه دوم — اتصال به گیت‌هاب
@@ -463,12 +463,12 @@ https://kpanah-lang.pages.dev
 2. مخزن را انتخاب کنید
 3. Build settings:
    - **Framework preset:** `Vite`
-   - **Build command:** `npm run build -w @kpanah/tma`
+   - **Build command:** `npm run build -w @llwa/tma`
    - **Build output directory:** `apps/tma/dist`
    - **Root directory:** `/` (ریشه monorepo)
 4. Environment variable اضافه کنید:
    ```
-   VITE_API_BASE = https://kpanah-lang-edge.language-app-backend.workers.dev
+   VITE_API_BASE = https://llwa-edge.language-app-backend.workers.dev
    ```
 5. Save and Deploy
 
@@ -491,10 +491,10 @@ https://kpanah-lang.pages.dev
 ```
 /newapp
 → ربات را انتخاب کنید
-→ Title: کپناه لهجه
+→ Title: LLWA لهجه
 → Description: یادگیری هوشمند زبان
 → Photo: (اختیاری، ۶۴۰×۳۶۰)
-→ Web App URL: https://kpanah-lang.pages.dev
+→ Web App URL: https://llwa.pages.dev
 → Short name: app
 ```
 
@@ -511,7 +511,7 @@ https://kpanah-lang.pages.dev
 ## ۷.۱ تست ورکر
 
 ```bash
-BASE="https://kpanah-lang-edge.language-app-backend.workers.dev/kpanah56/8fjg7rfb/v1/gate"
+BASE="https://llwa-edge.language-app-backend.workers.dev/llwa74/9xkr2mqv/v1/gate"
 
 # سلامت
 curl "$BASE?action=health"
@@ -573,7 +573,7 @@ curl "$BASE?action=plans"
 ## دیدن لاگ زنده ورکر
 
 ```bash
-npx wrangler tail kpanah-lang-edge
+npx wrangler tail llwa-edge
 ```
 
 ---

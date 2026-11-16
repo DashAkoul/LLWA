@@ -7,7 +7,7 @@
 #
 #  ⚠️ نکته مهم: Wrangler برای آپلود assets فایل‌های gitignore‌شده را
 #  نادیده می‌گیرد. پوشهٔ `dist/` در .gitignore است، پس بیلد را به
-#  `workers/app/public/` (که ignore نشده) کپی می‌کنیم.
+#  `workers/web/public/` (که ignore نشده) کپی می‌کنیم.
 #
 #  استفاده:
 #    bash scripts/deploy-frontend-worker.sh
@@ -29,13 +29,13 @@ npm run build:shared >/dev/null
 VITE_API_BASE="$API_BASE" npm run build:tma >/dev/null
 echo "   ✓ بیلد شد"
 
-echo "▶ ۲/۳  کپی بیلد به workers/app/public (غیر-gitignore) …"
-rm -rf workers/app/public
-cp -r apps/tma/dist workers/app/public
-echo "   ✓ $(find workers/app/public -type f | wc -l) فایل کپی شد"
+echo "▶ ۲/۳  کپی بیلد به workers/web/public (غیر-gitignore) …"
+rm -rf workers/web/public
+cp -r apps/web/dist workers/web/public
+echo "   ✓ $(find workers/web/public -type f | wc -l) فایل کپی شد"
 
 echo "▶ ۳/۳  دیپلوی …"
-cd workers/app
+cd workers/web
 npx wrangler deploy
 
 echo ""

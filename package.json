@@ -1,5 +1,5 @@
 {
-  "name": "kpanah-lang-platform",
+  "name": "llwa-platform",
   "version": "0.1.0",
   "private": true,
   "description": "Adaptive AI language tutor - Telegram Mini App + Serverless Edge backend",
@@ -9,13 +9,13 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:tma": "npm run dev -w @kpanah/tma",
-    "dev:edge": "npm run dev -w @kpanah/edge",
-    "build": "npm run build -w @kpanah/shared && npm run build -w @kpanah/edge && npm run build -w @kpanah/tma",
-    "build:shared": "npm run build -w @kpanah/shared",
-    "build:tma": "npm run build -w @kpanah/tma",
-    "build:edge": "npm run build -w @kpanah/edge",
-    "deploy:ghpages": "REPO=DashAkoul/kpanah bash scripts/deploy-github-pages.sh",
+    "dev:web": "npm run dev -w @llwa/web",
+    "dev:edge": "npm run dev -w @llwa/edge",
+    "build": "npm run build -w @llwa/shared && npm run build -w @llwa/edge && npm run build -w @llwa/web",
+    "build:shared": "npm run build -w @llwa/shared",
+    "build:tma": "npm run build -w @llwa/web",
+    "build:edge": "npm run build -w @llwa/edge",
+    "deploy:ghpages": "REPO=DashAkoul/llwa bash scripts/deploy-github-pages.sh",
     "deploy:app": "bash scripts/deploy-frontend-worker.sh",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",

@@ -130,14 +130,14 @@ node tools/sign-initdata.mjs --id 123456789 --name Ali --username ali
 ```bash
 INITDATA=$(node tools/sign-initdata.mjs --id 123456789)
 BODY=$(node -e "process.stdout.write(JSON.stringify({initData:process.argv[1]}))" "$INITDATA")
-curl -s -X POST "http://127.0.0.1:8787/kpanah56/8fjg7rfb/v1/gate?action=auth" \
+curl -s -X POST "http://127.0.0.1:8787/llwa74/9xkr2mqv/v1/gate?action=auth" \
   -H "Content-Type: application/json" --data-binary "$BODY"
 ```
 
 ### ۵.۳ همان تست روی سرور production
 
 ```bash
-curl -s -X POST "https://kpanah-lang-edge.language-app-backend.workers.dev/kpanah56/8fjg7rfb/v1/gate?action=auth" \
+curl -s -X POST "https://llwa-edge.language-app-backend.workers.dev/llwa74/9xkr2mqv/v1/gate?action=auth" \
   -H "Content-Type: application/json" --data-binary "$BODY"
 ```
 
@@ -151,7 +151,7 @@ curl -s -X POST "https://kpanah-lang-edge.language-app-backend.workers.dev/kpana
 خود مینی‌اپ باز می‌شود و همه‌چیز را نشان می‌دهد:
 
 ```
-https://kpanah-lang.pages.dev/debug.html
+https://llwa.pages.dev/debug.html
 ```
 
 ### چطور بازش کنیم؟
@@ -203,9 +203,9 @@ https://kpanah-lang.pages.dev/debug.html
 در @BotFather:
 
 1. `/mybots` → ربات خودتان → **Bot Settings** → **Menu Button**
-   - نوع: **Web App** (نه «Simple»)، و URL = `https://kpanah-lang.pages.dev`
+   - نوع: **Web App** (نه «Simple»)، و URL = `https://llwa.pages.dev`
 2. **Bot Settings → Configure Mini App** → دامنه ثبت شده باشد:
-   `kpanah-lang.pages.dev`
+   `llwa.pages.dev`
 3. مطمئن شوید اپ از **دکمهٔ Web App خود ربات** باز می‌شود، نه لینک دستی
    در مرورگر (لینک دستی initData ندارد).
 
@@ -219,15 +219,15 @@ https://kpanah-lang.pages.dev/debug.html
 اپ باید به **ورکر** وصل شود، نه به دامنهٔ Pages. اگر `VITE_API_BASE`
 ست نشود، اپ درخواست نسبی می‌زند → 404 HTML → خطای مبهم server_error.
 
-- در صفحهٔ عیب‌یابی، ردیف `window.__KPANAH_API_BASE__` را ببینید.
-  باید `https://kpanah-lang-edge...workers.dev` باشد.
+- در صفحهٔ عیب‌یابی، ردیف `window.__LLWA_API_BASE__` را ببینید.
+  باید `https://llwa-edge...workers.dev` باشد.
 - اگر خالی بود، بیلد را با env صریح انجام دهید:
 
 ```bash
 cd "/c/Users/Akoul/WorkBuddy AI/2026-10-10-23-30-06"
 npm run build:shared
-VITE_API_BASE="https://kpanah-lang-edge.language-app-backend.workers.dev" npm run build:tma
-cd apps/tma && npx wrangler pages deploy dist --project-name=kpanah-lang
+VITE_API_BASE="https://llwa-edge.language-app-backend.workers.dev" npm run build:tma
+cd apps/tma && npx wrangler pages deploy dist --project-name=llwa
 ```
 
 ---
@@ -237,9 +237,9 @@ cd apps/tma && npx wrangler pages deploy dist --project-name=kpanah-lang
 ```bash
 cd "/c/Users/Akoul/WorkBuddy AI/2026-10-10-23-30-06"
 
-npm run typecheck -w @kpanah/tma      # تایپ‌چک فرانت
-npm run typecheck -w @kpanah/edge     # تایپ‌چک بک
-npm run test    -w @kpanah/edge       # ۴۴ تست ورکر
+npm run typecheck -w @llwa/tma      # تایپ‌چک فرانت
+npm run typecheck -w @llwa/edge     # تایپ‌چک بک
+npm run test    -w @llwa/edge       # ۴۴ تست ورکر
 ```
 
 ---

@@ -1,12 +1,12 @@
 # انتشار روی GitHub Pages
 
-> **چرا؟** Cloudflare Pages (`kpanah-lang.pages.dev`) در ایران فیلتر است.
+> **چرا؟** Cloudflare Pages (`llwa.pages.dev`) در ایران فیلتر است.
 > GitHub Pages معمولاً باز است، پس فرانت‌اند Mini App را آنجا میزبانی می‌کنیم.
 
 ## لینک فعلی
 
 ```
-https://dashakoul.github.io/kpanah/
+https://dashakoul.github.io/llwa/
 ```
 
 این همان لینکی است که در **BotFather** باید به‌عنوان Mini App URL ثبت شود.
@@ -17,8 +17,8 @@ https://dashakoul.github.io/kpanah/
 
 | بخش | میزبان | آدرس |
 |---|---|---|
-| Mini App (فرانت) | GitHub Pages | `https://dashakoul.github.io/kpanah/` |
-| Edge Worker (بک) | Cloudflare Workers | `https://kpanah-lang-edge.language-app-backend.workers.dev` |
+| Mini App (فرانت) | GitHub Pages | `https://dashakoul.github.io/llwa/` |
+| Edge Worker (بک) | Cloudflare Workers | `https://llwa-edge.language-app-backend.workers.dev` |
 | داده | Supabase | (خارج از ایران) |
 
 > نکتهٔ مهم: Worker روی `workers.dev` است. اگر `workers.dev` هم در ایران
@@ -37,7 +37,7 @@ https://dashakoul.github.io/kpanah/
 | هدرها | `_headers` | پشتیبانی نمی‌شود |
 
 به همین دلیل:
-- در بیلد، `VITE_BASE_PATH=/kpanah/` ست می‌شود تا assetها از زیرمسیر لود شوند.
+- در بیلد، `VITE_BASE_PATH=/llwa/` ست می‌شود تا assetها از زیرمسیر لود شوند.
 - `404.html` کپی همان `index.html` است (هر مسیر ناشناخته اپ را بالا می‌آورد).
 - `.nojekyll` خالی وجود دارد تا Jekyll فایل‌های مهم را نادیده نگیرد.
 
@@ -55,11 +55,11 @@ npm run deploy:ghpages
 یا مستقیم:
 
 ```bash
-REPO=DashAkoul/kpanah bash scripts/deploy-github-pages.sh
+REPO=DashAkoul/llwa bash scripts/deploy-github-pages.sh
 ```
 
 این اسکریپت:
-1. `shared` و `tma` را با `base=/kpanah/` می‌سازد.
+1. `shared` و `tma` را با `base=/llwa/` می‌سازد.
 2. `.nojekyll` و `404.html` را اضافه می‌کند و فایل‌های Cloudflare را حذف می‌کند.
 3. یک شاخهٔ `gh-pages` می‌سازد و با توکن `gh` push می‌کند.
 4. اگر Pages فعال نباشد، فعالش می‌کند.
@@ -81,7 +81,7 @@ REPO=DashAkoul/kpanah bash scripts/deploy-github-pages.sh
 
 | نشانه | علت | راه‌حل |
 |---|---|---|
-| صفحه سفید | مسیر پایه اشتباه | مطمئن شوید `VITE_BASE_PATH=/kpanah/` ست شده |
+| صفحه سفید | مسیر پایه اشتباه | مطمئن شوید `VITE_BASE_PATH=/llwa/` ست شده |
 | asset ها 404 | بیلد بدون base | دوباره `npm run deploy:ghpages` |
 | اپ لود می‌شود ولی خطای سرور | CORS یا آدرس API | `/debug.html` را باز کنید |
 | خطای 404 روی رفرش | 404.html نیست | اسکریپت خودش می‌سازد؛ دوباره دیپلوی کنید |

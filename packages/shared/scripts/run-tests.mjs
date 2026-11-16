@@ -7,7 +7,7 @@
  * aborts the run with EPERM. Pointing TMPDIR/TEMP/TMP at a workspace-local
  * folder (which is writable and git-ignored) sidesteps the problem entirely.
  *
- * Set `KPANAH_KEEP_TMP=1` to leave the scratch directory behind for debugging.
+ * Set `LLWA_KEEP_TMP=1` to leave the scratch directory behind for debugging.
  */
 import { spawn } from 'node:child_process';
 import { mkdirSync, rmSync } from 'node:fs';
@@ -46,7 +46,7 @@ const child = spawn(process.execPath, [vitestEntry, 'run', ...process.argv.slice
 });
 
 child.on('exit', (code) => {
-  if (!process.env.KPANAH_KEEP_TMP) {
+  if (!process.env.LLWA_KEEP_TMP) {
     try {
       rmSync(tmpDir, { recursive: true, force: true });
     } catch {

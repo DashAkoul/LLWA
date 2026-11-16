@@ -17,7 +17,7 @@ export interface RouteMeta {
 
 /**
  * استخراج اکشن از query string دروازه.
- * POST /kpanah56/8fjg7rfb/v1/gate?action=get-today-lesson
+ * POST /llwa74/9xkr2mqv/v1/gate?action=get-today-lesson
  */
 export function resolveRoute(url: URL): RouteMeta {
   const action = url.searchParams.get('action') ?? '';

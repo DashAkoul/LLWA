@@ -2,7 +2,7 @@
 # دود تست انتهابه‌انتها روی محیط زنده (چک‌لیست ۲۴).
 # فقط نقاط عمومی/محافظت‌شده را بررسی می‌کند — بدون نیاز به initData.
 set -u
-API="${API:-https://api.infolange.kdns.fr/kpanah56/8fjg7rfb/v1/gate}"
+API="${API:-https://api.infolange.kdns.fr/llwa74/9xkr2mqv/v1/gate}"
 APP="${APP:-https://app.infolange.kdns.fr}"
 fail=0
 
