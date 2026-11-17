@@ -897,6 +897,8 @@ export const aiStepCyclesSchema = z.object({
 export const aiDayPlanSchema = z.object({
   dayNumber: z.number().int().min(1).max(7),
   title: z.string().min(2).max(120),
+  /** همان عنوان به زبان رابط کاربر (اختیاری؛ اگر نبود از title استفاده می‌شود) */
+  titleUi: z.string().min(2).max(120).optional(),
   kind: z.enum(['TEACHING', 'HIDDEN_ASSESSMENT', 'CONSOLIDATION']),
   /** هدف آن روز — «چه کاری می‌تواند بکند» */
   objective: z.string().min(5).max(300),
@@ -907,6 +909,12 @@ export const aiDayPlanSchema = z.object({
 });
 
 export const aiCycleSyllabusSchema = z.object({
+  /** عنوان چرخه — کوتاه و مشخص */
+  title: z.string().min(2).max(120),
+  /** همان، به زبان رابط کاربر */
+  titleUi: z.string().min(2).max(120),
+  /** یک پاراگراف کوتاه: این چرخه چه چیزی را تثبیت می‌کند */
+  focusSummary: z.string().min(5).max(400),
   days: z.array(aiDayPlanSchema).length(7),
 });
 
@@ -914,3 +922,4 @@ export type AiStep = z.infer<typeof aiStepSchema>;
 export type AiMapPlan = z.infer<typeof aiMapPlanSchema>;
 export type AiCyclePlan = z.infer<typeof aiCyclePlanSchema>;
 export type AiDayPlan = z.infer<typeof aiDayPlanSchema>;
+export type AiCycleSyllabus = z.infer<typeof aiCycleSyllabusSchema>;

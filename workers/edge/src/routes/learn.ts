@@ -47,7 +47,7 @@ import {
   MIN_EVIDENCE_ANSWERS,
   validateLessonAgainstMap,
 } from '../services/learning-map';
-import { applyStagesToMap, planStages } from '../services/ai-planner';
+import { applyStagesToMap, planCycleDays, planStages } from '../services/ai-planner';
 import {
   coinDiscountFor,
   DEFAULT_COIN_DISCOUNT,
@@ -2391,6 +2391,49 @@ async function runModularGeneration(
   let outline = (await r.getCachedContent('CYCLE_OUTLINE', outlineKey)) as CycleOutline | null;
   let outlineModel = 'cache';
   let outlineMs = 0;
+
+  if (!outline) {
+    /**
+     * فراخوانی #۴ — «چرخه → سرفصل هفت روز».
+     *
+     * اول این را امتحان می‌کنیم چون ساختار روزها را صریح می‌دهد (هدف و
+     * نقطه‌عطف هر روز). اگر مدل در دسترس نبود یا خروجی‌اش با قواعد چرخه
+     * نخواند، به تولید یک‌مرحله‌ای قبلی برمی‌گردیم.
+     */
+    try {
+      const mapForStage = await r.getLearningMap(input.user.id);
+      const stage = mapForStage ? currentStage(mapForStage) : null;
+      const aiPlan = await planCycleDays(engine, {
+        targetLanguage: input.user.targetLanguage,
+        uiLanguage: input.user.uiLanguage,
+        previousMilestone: stage?.prerequisites?.length
+          ? `completed prerequisites: ${stage.prerequisites.join(', ')}`
+          : 'entry level from the placement test',
+        cycleMilestone: stage?.objective ?? 'steady progress',
+        dailyMinutes: input.user.dailyMinutes ?? 15,
+      });
+
+      if (aiPlan) {
+        outline = {
+          title: aiPlan.title,
+          titleUi: aiPlan.titleUi,
+          focusSummary: aiPlan.focusSummary,
+          days: aiPlan.days.map((d) => ({
+            dayNumber: d.dayNumber,
+            title: d.title,
+            titleUi: d.titleUi ?? d.title,
+            kind: d.kind,
+            objective: d.objective,
+          })),
+        };
+        outlineModel = 'ai:cycle-to-lessons';
+      }
+    } catch (err) {
+      console.warn(
+        `[outline] ai syllabus skipped: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
 
   if (!outline) {
     const res = await engine.generateOutline(input);

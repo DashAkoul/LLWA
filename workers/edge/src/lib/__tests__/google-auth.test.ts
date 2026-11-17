@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { verifyGoogleIdToken } from '../google-auth';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { verifyGoogleIdToken, __clearGoogleJwksCache } from '../google-auth';
 
 /**
  * تست‌های اعتبارسنجی idToken گوگل.
@@ -7,6 +7,9 @@ import { verifyGoogleIdToken } from '../google-auth';
  * ما نمی‌توانیم امضای واقعی گوگل را در تست بسازیم (کلید خصوصی نداریم)،
  * پس روی «رد کردن» توکن‌های نامعتبر تمرکز می‌کنیم — همان چیزی که امنیت
  * را تضمین می‌کند. مسیر موفق با توکن واقعی در E2E پوشش داده می‌شود.
+ *
+ * ⚠️ `fetch` عمداً stub شده: تست واحد نباید به اینترنت وابسته باشد، وگرنه
+ * در شبکهٔ کند/فیلترشده بی‌دلیل timeout می‌دهد و CI را قرمز می‌کند.
  */
 
 function b64url(value: unknown): string {
@@ -25,6 +28,39 @@ function makeToken(
 }
 
 const CLIENT_IDS = ['test-client.apps.googleusercontent.com'];
+
+/**
+ * JWKS ساختگی — کلید واقعی نیست، فقط برای اینکه مسیر «kid ناشناخته»
+ * بدون تماس شبکه تست شود.
+ */
+beforeEach(() => {
+  __clearGoogleJwksCache();
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          keys: [
+            {
+              kid: 'some-other-kid',
+              kty: 'RSA',
+              alg: 'RS256',
+              use: 'sig',
+              n: 'sXchDaQebHnPiGvyDOAT4saGEUetSyo9MKLOoWFsueri23bOdgWp4Dy1WlUzewbgBHod5pcM9H95GQRV3JDXboIRROSBigeC5yjU1hGzHHyXss8UDprecbAYxknTcQkhslANGRUZmdTOQ5qTRsLAt6BTYuyvVRdhS8exSZEy_c4gs_7svlJJQ4H9_NxsiIoLwAEk7-Q3UXERGYw_75IDrGA84-lA_-Ct4eTlXHBIY2EaV7t7LjJaynVJCpkv4LKjTTAumiGUIuQhrNhZLuF_RJLqHpM2kgWFLU7-VTdL1VbC2tejvcI2BlMkEpk1BzBZI0KQB0GaDWFLN-aEAw3vRw',
+              e: 'AQAB',
+            },
+          ],
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    )
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  __clearGoogleJwksCache();
+});
 
 function basePayload(overrides: Record<string, unknown> = {}) {
   const now = Math.floor(Date.now() / 1000);

@@ -28,6 +28,7 @@ import {
   type AiMapPlan,
   type AiCyclePlan,
   type AiDayPlan,
+  type AiCycleSyllabus,
 } from '@llwa/shared';
 import type { Env } from '../types';
 import { resolveProviderKey, FROM_ENV_MARKER } from '../lib/provider-vault';
@@ -746,7 +747,7 @@ export class AiEngine {
     /** واژه‌های موجود در فرهنگ برای پیشنهاد — صفر توکن برای جزئیات */
     knownTerms?: string[];
   }): Promise<{
-    days: AiDayPlan[] | null;
+    plan: AiCycleSyllabus | null;
     attempts: AiAttempt[];
     model: string;
     totalMs: number;
@@ -754,6 +755,9 @@ export class AiEngine {
     const jsonSchema = {
       type: 'object',
       properties: {
+        title: { type: 'string' },
+        titleUi: { type: 'string' },
+        focusSummary: { type: 'string' },
         days: {
           type: 'array',
           items: {
@@ -773,7 +777,7 @@ export class AiEngine {
           },
         },
       },
-      required: ['days'],
+      required: ['title', 'titleUi', 'focusSummary', 'days'],
     };
 
     const override = await activePrompt(this.env, 'cycle-to-lessons');
@@ -820,7 +824,7 @@ export class AiEngine {
       jsonSchema
     );
 
-    return { days: r.value?.days ?? null, attempts: r.attempts, model: r.model, totalMs: r.totalMs };
+    return { plan: r.value ?? null, attempts: r.attempts, model: r.model, totalMs: r.totalMs };
   }
 
   async generateLesson(

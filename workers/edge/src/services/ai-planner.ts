@@ -166,12 +166,13 @@ export async function planCycleDays(
     dailyMinutes: number;
     knownTerms?: string[];
   }
-): Promise<AiDayPlan[] | null> {
+): Promise<CycleSyllabus | null> {
   try {
     const res = await engine.planCycleSyllabus(input);
-    if (!res.days || res.days.length !== 7) return null;
+    const plan = res.plan;
+    if (!plan || plan.days.length !== 7) return null;
 
-    const sorted = [...res.days].sort((a, b) => a.dayNumber - b.dayNumber);
+    const sorted = [...plan.days].sort((a, b) => a.dayNumber - b.dayNumber);
     const numbersOk = sorted.every((d, i) => d.dayNumber === i + 1);
     if (!numbersOk) return null;
 
@@ -182,10 +183,18 @@ export async function planCycleDays(
       sorted[6]?.kind === 'CONSOLIDATION';
     if (!kindsOk) return null;
 
-    return sorted;
+    return { ...plan, days: sorted };
   } catch {
     return null;
   }
+}
+
+/** طرح چرخه پس از اعتبارسنجی */
+export interface CycleSyllabus {
+  title: string;
+  titleUi: string;
+  focusSummary: string;
+  days: AiDayPlan[];
 }
 
 /**
