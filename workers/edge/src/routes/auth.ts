@@ -2,6 +2,8 @@ import {
   authRequestSchema,
   authLinkRequestSchema,
   googleAuthRequestSchema,
+  demoAuthRequestSchema,
+  adminAuthRequestSchema,
 } from '@llwa/shared';
 import { SECURITY, languageFromTelegramCode } from '@llwa/shared';
 import type { Env, RequestContext } from '../types';
@@ -339,6 +341,154 @@ function isAdminEmail(env: Env, email?: string): boolean {
 function languageFromGoogleLocale(locale?: string): string {
   const base = (locale ?? '').toLowerCase().split(/[-_]/)[0];
   return base === 'fa' ? 'fa' : 'en';
+}
+
+/**
+ * POST /gate?action=auth-demo
+ *
+ * ⚠️ ورود آزمایشی برای MVP — **بدون Google**.
+ *
+ * چرا؟ در نسخهٔ MVP می‌خواهیم کل جریان (آنبوردینگ، تعیین سطح، تولید درس،
+ * چرخه، مرور، فروشگاه) را بدون تنظیم Google Cloud Console تست کنیم.
+ *
+ * امنیت:
+ *   • فقط وقتی `DEMO_MODE === 'true'` است فعال می‌شود؛ در production خاموش.
+ *   • کاربر ساخته‌شده `auth_provider = 'GOOGLE'` و `google_sub = 'demo:…'`
+ *     دارد ولی **ادمین نیست** — پس نمی‌تواند به مسیرهای مدیریتی دست بزند.
+ *   • هر دستگاه با `deviceId` خودش کاربر جدا می‌گیرد تا بتوان چند بار
+ *     آنبوردینگ را تست کرد.
+ */
+export async function handleAuthDemo(
+  request: Request,
+  context: RequestContext
+): Promise<Response> {
+  const { env, requestId } = context;
+
+  if (String(env.DEMO_MODE ?? 'false') !== 'true') {
+    return jsonError(
+      'NOT_FOUND',
+      'Demo sign-in is disabled',
+      requestId,
+      env,
+      404
+    );
+  }
+
+  const body = await readJson(request);
+  const parsed = demoAuthRequestSchema.safeParse(body ?? {});
+  const deviceId = parsed.success ? parsed.data.deviceId : undefined;
+  const key = deviceId ? `demo:${deviceId}` : 'demo:default';
+
+  const db = new SupabaseClient(env);
+  const repo = new ContentRepository(db, env);
+
+  const user = await repo.upsertUserByGoogle({
+    sub: key,
+    email: `${deviceId ? `demo-${deviceId}` : 'demo'}@llwa.local`,
+    firstName: 'کاربر آزمایشی',
+    lastName: null,
+    photoUrl: null,
+    uiLanguage: 'fa',
+  });
+
+  return finalizeSession(env, requestId, repo, user, {
+    googleSub: key,
+    email: user.email ?? undefined,
+    detectedLanguage: 'fa',
+  });
+}
+
+/**
+ * POST /gate?action=auth-admin
+ *
+ * ورود پنل ادمین وب با رمز مشترک (MVP).
+ *
+ * ⚠️ این یک راه‌حل موقت است تا پنل از روز اول قابل استفاده باشد. برای
+ * production باید به Google Workspace / SSO منتقل شود. رمز فقط از env
+ * خوانده می‌شود و هرگز در کد یا دیتابیس نیست.
+ */
+export async function handleAuthAdmin(
+  request: Request,
+  context: RequestContext
+): Promise<Response> {
+  const { env, requestId } = context;
+
+  const expected = env.ADMIN_PANEL_PASSWORD;
+  if (!expected) {
+    return jsonError(
+      'SERVER_MISCONFIGURED',
+      'Admin panel password is not configured',
+      requestId,
+      env,
+      500
+    );
+  }
+
+  const body = await readJson(request);
+  const parsed = adminAuthRequestSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return jsonError('VALIDATION_ERROR', 'password is required', requestId, env, 400);
+  }
+
+  if (!(await constantTimeEqual(parsed.data.password, expected))) {
+    return jsonError(
+      'UNAUTHORIZED',
+      'Invalid password',
+      requestId,
+      env,
+      401,
+      'errors.invalid_session'
+    );
+  }
+
+  // کاربر ادمین: اولین ایمیل از ADMIN_EMAILS، وگرنه یک حساب پیش‌فرض
+  const adminEmail =
+    (env.ADMIN_EMAILS ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)[0] ?? 'admin@llwa.local';
+
+  const db = new SupabaseClient(env);
+  const repo = new ContentRepository(db, env);
+
+  const user = await repo.upsertUserByGoogle({
+    sub: `panel:${adminEmail}`,
+    email: adminEmail,
+    firstName: 'مدیر',
+    lastName: null,
+    photoUrl: null,
+    uiLanguage: 'fa',
+  });
+
+  // نقش ادمین را تضمین کن (کاربر پنل همیشه SUPER_ADMIN است)
+  if (!user.is_admin || (user as { admin_role?: string | null }).admin_role !== 'SUPER_ADMIN') {
+    await repo.updateUser(user.id, { is_admin: true, admin_role: 'SUPER_ADMIN' });
+    user.is_admin = true;
+  }
+
+  return finalizeSession(env, requestId, repo, user, {
+    googleSub: `panel:${adminEmail}`,
+    email: adminEmail,
+    detectedLanguage: 'fa',
+  });
+}
+
+/**
+ * مقایسهٔ ثابت‌زمان برای جلوگیری از حملهٔ زمان‌سنجی.
+ * (مقایسهٔ `===` رشته در JS زودتر از موعد برمی‌گردد و طول رمز را لو می‌دهد.)
+ */
+async function constantTimeEqual(a: string, b: string): Promise<boolean> {
+  const enc = new TextEncoder();
+  const [ha, hb] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(a)),
+    crypto.subtle.digest('SHA-256', enc.encode(b)),
+  ]);
+  const va = new Uint8Array(ha);
+  const vb = new Uint8Array(hb);
+  let diff = 0;
+  for (let i = 0; i < va.length; i++) diff |= va[i]! ^ vb[i]!;
+  return diff === 0;
 }
 
 /**

@@ -10,7 +10,8 @@
     "./types": "./src/types/index.ts",
     "./schemas": "./src/schemas/index.ts",
     "./constants": "./src/constants/index.ts",
-    "./engine": "./src/engine/index.ts"
+    "./engine": "./src/engine/index.ts",
+    "./locales": "./src/locales/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

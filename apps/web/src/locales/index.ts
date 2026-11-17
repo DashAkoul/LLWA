@@ -3,11 +3,7 @@ import { initReactI18next } from 'react-i18next';
 import type { SupportedUiLanguage } from '@llwa/shared';
 import { RTL_LANGUAGES, DEFAULT_UI_LANGUAGE } from '@llwa/shared';
 
-import fa from './fa';
-import en from './en';
-import ar from './ar';
-import tr from './tr';
-import ru from './ru';
+import { fa, en, ar, tr, ru } from '@llwa/shared/locales';
 
 /**
  * i18n bootstrap.

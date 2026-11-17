@@ -13,6 +13,8 @@ import { scanPayloadForInjection } from './middleware/content-filter';
 import {
   handleAuth,
   handleAuthGoogle,
+  handleAuthDemo,
+  handleAuthAdmin,
   handleAuthLink,
   handleMe,
   handleHealth,
@@ -404,6 +406,10 @@ async function dispatch(
       return handleAuth(request, context);
     case 'auth-google':
       return handleAuthGoogle(request, context);
+    case 'auth-demo':
+      return handleAuthDemo(request, context);
+    case 'auth-admin':
+      return handleAuthAdmin(request, context);
     case 'auth-link':
       return handleAuthLink(request, context);
     case 'me':

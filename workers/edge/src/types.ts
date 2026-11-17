@@ -26,6 +26,17 @@ export interface Env {
    */
   ADMIN_EMAILS?: string;
 
+  /**
+   * ⚠️ فقط برای MVP و تست. اگر `'true'` باشد، اکشن `auth-demo` فعال می‌شود
+   * و بدون Google یک کاربر آزمایشی می‌سازد. **در production باید خاموش باشد.**
+   */
+  DEMO_MODE?: string;
+  /**
+   * رمز ورود پنل ادمین (اپ وب جدا). اگر تنظیم نشده باشد، `auth-admin` کار
+   * نمی‌کند. برای MVP است؛ بعداً با Google Workspace جایگزین می‌شود.
+   */
+  ADMIN_PANEL_PASSWORD?: string;
+
   // Queue
   QSTASH_TOKEN?: string;
   QSTASH_CURRENT_SIGNING_KEY?: string;
