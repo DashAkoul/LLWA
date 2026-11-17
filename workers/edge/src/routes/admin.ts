@@ -15,18 +15,6 @@ import { SupabaseClient } from '../services/supabase';
  * NOT in scope yet: receipt review (ZarinPal / OCR) — deferred to phase 2.
  */
 
-export function isAdminFromEnv(
-  env: RequestContext['env'],
-  telegramId?: number | null
-): boolean {
-  if (typeof telegramId !== 'number' || !Number.isFinite(telegramId)) return false;
-  const ids = (env.TELEGRAM_ADMIN_IDS ?? '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map(Number);
-  return ids.includes(telegramId);
-}
 
 function repo(env: RequestContext['env']): ContentRepository {
   return new ContentRepository(new SupabaseClient(env), env);
@@ -157,22 +145,23 @@ export async function handleAdminGift(
     );
   }
 
-  const { telegramId, planType, note, extend } = parsed.data;
+  const { userId: targetUserId, telegramId, planType, note, extend } = parsed.data;
 
   const r = repo(env);
 
   // ادمین را در دیتابیس پیدا کن (برای audit trail)
   let adminRowId = adminUserId ?? null;
-  if (!adminRowId) {
-    const admin = await r.findUserByTelegramId(context.telegramId!);
-    adminRowId = admin?.id ?? null;
-  }
-
-  const target = await r.findUserByTelegramId(telegramId);
+  // ⚠️ کلید اصلی در اپ موبایل `userId` است؛ telegramId فقط برای
+  // کاربران قدیمی ربات نگه داشته شده است.
+  const target = targetUserId
+    ? await r.findUserById(targetUserId)
+    : telegramId
+      ? await r.findUserByTelegramId(telegramId)
+      : null;
   if (!target) {
     return jsonError(
       'NOT_FOUND',
-      `No user with telegram_id ${telegramId}. The user must start the bot first.`,
+      `No user with id ${targetUserId ?? telegramId}`,
       requestId,
       env,
       404
@@ -200,14 +189,6 @@ export async function handleAdminGift(
       daysDelta: PLAN_DURATION_DAYS[planType],
       note,
     });
-  }
-
-  // اطلاع‌رسانی به کاربر از طریق ربات (اختیاری و غیرحیاتی).
-  // ⚠️ کاربران اپ موبایل telegram_id ندارند → اعلان ربات برایشان ممکن نیست.
-  if (typeof target.telegram_id === 'number') {
-    context.waitUntil?.(
-      notifyUserOfGift(env, target.telegram_id, planType, subscription.expires_at)
-    );
   }
 
   return jsonSuccess(
@@ -314,50 +295,6 @@ function clampInt(
   return Math.min(max, Math.max(min, Math.trunc(n)));
 }
 
-/**
- * پیام تشکر برای کاربری که هدیه گرفته. اگر ربات در دسترس نبود،
- * خطا را نمی‌بلعد تا درخواست ادمین fail نشود.
- */
-async function notifyUserOfGift(
-  env: RequestContext['env'],
-  telegramId: number,
-  planType: string,
-  expiresAt: string
-): Promise<void> {
-  if (!env.TELEGRAM_BOT_TOKEN) return;
-
-  const labels: Record<string, string> = {
-    '2_WEEKS': '۲ هفته‌ای',
-    '1_MONTH': '۱ ماهه',
-    '3_MONTHS': '۳ ماهه',
-    '6_MONTHS': '۶ ماهه',
-    '1_YEAR': '۱ ساله',
-    TRIAL: 'آزمایشی',
-  };
-
-  const expiry = new Date(expiresAt).toLocaleDateString('fa-IR');
-  const text = [
-    '🎁 یک هدیه برای شما!',
-    '',
-    `پلن ${labels[planType] ?? planType} به‌صورت رایگان به حساب شما اضافه شد.`,
-    `اعتبار تا: ${expiry}`,
-    '',
-    'موفق باشید! 🚀',
-  ].join('\n');
-
-  try {
-    await fetch(
-      `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: telegramId, text }),
-      }
-    );
-  } catch {
-    // غیرحیاتی
-  }
-}
 
 // ═════════════════════════════════════════════════════════════════════
 // Admin — پشتیبانی (تیکت‌ها)
@@ -424,15 +361,6 @@ export async function handleAdminSupportReply(
 
 const ROLES = ['SUPER_ADMIN', 'SUPPORT', 'MARKETING', 'FINANCE'] as const;
 
-/** آیدی‌های ادمین از env (همیشه SUPER_ADMIN) */
-function envAdminIds(env: RequestContext['env']): number[] {
-  return (env.TELEGRAM_ADMIN_IDS ?? '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map(Number)
-    .filter((n) => Number.isFinite(n) && n > 0);
-}
 
 /**
  * لیست ادمین‌ها (فقط SUPER_ADMIN).
@@ -450,7 +378,7 @@ export async function handleAdminListAdmins(
   const r = repo(env);
 
   const dbAdmins = await r.listAdmins();
-  const envIds = envAdminIds(env);
+  const envIds: number[] = [];
 
   const present = new Set(
     dbAdmins.map((a) => Number((a as { telegram_id: number }).telegram_id))
@@ -501,25 +429,6 @@ export async function handleAdminSetRole(
     return jsonError('VALIDATION_ERROR', 'telegramId and a valid role are required', requestId, env, 400);
   }
 
-  // ادمین env قابل تغییر نیست (همیشه SUPER_ADMIN است)
-  if (envAdminIds(env).includes(telegramId)) {
-    // ولی لقبش قابل ثبت است
-    if (title !== undefined) {
-      const r = repo(env);
-      const ok = await r.setAdminRole(telegramId, 'SUPER_ADMIN', title);
-      if (!ok) {
-        return jsonError('NOT_FOUND', 'کاربری با این آیدی پیدا نشد.', requestId, env, 404);
-      }
-      return jsonSuccess({ ok: true, telegramId, role: 'SUPER_ADMIN', title }, requestId, env);
-    }
-    return jsonError(
-      'VALIDATION_ERROR',
-      'این کاربر از طریق تنظیمات سرور (env) مدیر است و نقشش قابل تغییر نیست.',
-      requestId,
-      env,
-      409
-    );
-  }
 
   const r = repo(env);
   const ok = await r.setAdminRole(telegramId, role, title);
@@ -596,9 +505,6 @@ export async function handleAdminMessageSend(
           senderName,
           sentViaBot: viaBot,
         });
-        if (viaBot) {
-          await sendBotMessage(env, u.telegram_id, botText);
-        }
         sent++;
       } catch {
         /* ادامه بده */
@@ -636,10 +542,6 @@ export async function handleAdminMessageSend(
     sentViaBot: viaBot,
   });
 
-  if (viaBot) {
-    await sendBotMessage(env, targetTelegramId, botText);
-  }
-
   return jsonSuccess({ ok: true, sent: 1 }, requestId, env);
 }
 
@@ -654,18 +556,6 @@ export async function handleAdminMessagesList(
   return jsonSuccess({ messages }, requestId, env);
 }
 
-/** ارسال پیام ساده از ربات */
-async function sendBotMessage(env: RequestContext['env'], chatId: number, text: string): Promise<void> {
-  try {
-    await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text }),
-    });
-  } catch {
-    /* غیرحیاتی */
-  }
-}
 
 // ═════════════════════════════════════════════════════════════════════
 // Admin — CRUD اشتراک‌ها (SUPER_ADMIN / FINANCE)

@@ -3,7 +3,7 @@
  * (No dependencies — Workers-native, small cold-start.)
  */
 
-import { base64UrlDecode, base64UrlEncode, hmacSha256 } from './telegram-auth';
+import { base64UrlDecode, base64UrlEncode, hmacSha256 } from './crypto-utils';
 
 export interface JwtPayload {
   [key: string]: unknown;

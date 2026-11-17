@@ -15,7 +15,7 @@
  *   ۵. `email_verified` برای ورود با ایمیل الزامی است.
  */
 
-import { base64UrlDecode } from './telegram-auth';
+import { base64UrlDecode } from './crypto-utils';
 
 const JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
 const VALID_ISSUERS = new Set(['accounts.google.com', 'https://accounts.google.com']);

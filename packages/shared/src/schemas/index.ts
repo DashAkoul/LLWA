@@ -427,17 +427,7 @@ export const cycleGenerationInputSchema = z.object({
 // API request payloads (from the client)
 // ─────────────────────────────────────────────────────────────────────
 
-export const authRequestSchema = z.object({
-  initData: z.string().min(10),
-});
 
-/**
- * ورود با توکن یک‌بارمصرف لینک (وقتی initData در دسترس نیست).
- * توکن base64url با ۳۲ بایت آنتروپی است → ۴۳ کاراکتر.
- */
-export const authLinkRequestSchema = z.object({
-  token: z.string().min(16).max(128),
-});
 
 /**
  * ورود اپ موبایل با حساب گوگل.
@@ -702,7 +692,10 @@ export const planDeleteSchema = z.object({
 
 // Admin
 export const adminGiftSchema = z.object({
-  telegramId: z.number().int().positive(),
+  /** شناسهٔ داخلی کاربر — کلید اصلی در اپ موبایل */
+  userId: z.string().uuid().optional(),
+  /** سازگاری با کاربران قدیمی ربات (اگر وجود داشته باشد) */
+  telegramId: z.number().int().positive().optional(),
   planType: planTypeSchema,
   note: z.string().max(500).optional(),
   extend: z.boolean().default(false),
@@ -798,30 +791,9 @@ export const testAiProviderSchema = z.object({
   draft: createAiProviderSchema.optional(),
 });
 
-// Telegram Stars update (subset we care about)
-export const telegramSuccessfulPaymentSchema = z.object({
-  telegram_payment_charge_id: z.string().min(1),
-  provider_payment_charge_id: z.string().optional(),
-  currency: z.string(),
-  total_amount: z.number().int().min(1),
-  invoice_payload: z.string(),
-});
 
-// ─────────────────────────────────────────────────────────────────────
-// Telegram initData
-// ─────────────────────────────────────────────────────────────────────
 
-export const telegramInitDataUserSchema = z.object({
-  id: z.number().int().positive(),
-  first_name: z.string(),
-  last_name: z.string().optional(),
-  username: z.string().optional(),
-  language_code: z.string().optional(),
-  is_premium: z.boolean().optional(),
-  photo_url: z.string().optional(),
-});
 
-export type TelegramInitDataUser = z.infer<typeof telegramInitDataUserSchema>;
 
 // ─────────────────────────────────────────────────────────────────────
 // Helpers

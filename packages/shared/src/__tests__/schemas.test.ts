@@ -4,7 +4,6 @@ import {
   generatedCycleSchema,
   completeLessonSchema,
   adminGiftSchema,
-  telegramInitDataUserSchema,
   createAiProviderSchema,
   updateAiProviderSchema,
   reorderAiProvidersSchema,
@@ -166,9 +165,9 @@ describe('completeLessonSchema', () => {
 });
 
 describe('adminGiftSchema', () => {
-  it('accepts a gift request and defaults extend to false', () => {
+  it('accepts a gift request by userId and defaults extend to false', () => {
     const r = adminGiftSchema.parse({
-      telegramId: 123456789,
+      userId: '11111111-1111-4111-8111-111111111111',
       planType: '3_MONTHS',
     });
     expect(r.extend).toBe(false);
@@ -176,29 +175,17 @@ describe('adminGiftSchema', () => {
 
   it('rejects an unknown plan type', () => {
     const r = adminGiftSchema.safeParse({
-      telegramId: 123456789,
+      userId: '11111111-1111-4111-8111-111111111111',
       planType: 'LIFETIME',
     });
     expect(r.success).toBe(false);
   });
 
-  it('rejects a non-numeric telegram id', () => {
+  it('rejects a malformed user id', () => {
     const r = adminGiftSchema.safeParse({
-      telegramId: 'abc',
+      userId: 'not-a-uuid',
       planType: '1_MONTH',
     });
-    expect(r.success).toBe(false);
-  });
-});
-
-describe('telegramInitDataUserSchema', () => {
-  it('accepts a minimal Telegram user', () => {
-    const r = telegramInitDataUserSchema.safeParse({ id: 42, first_name: 'Ali' });
-    expect(r.success).toBe(true);
-  });
-
-  it('rejects a user without an id', () => {
-    const r = telegramInitDataUserSchema.safeParse({ first_name: 'Ali' });
     expect(r.success).toBe(false);
   });
 });

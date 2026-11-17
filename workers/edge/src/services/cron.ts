@@ -74,22 +74,12 @@ export async function runHourlyMaintenance(
   try {
     const since = new Date(Date.now() - 3_600_000).toISOString();
     const failures = await r.countFailedAiAttempts(since);
-    if (failures >= 5 && env.TELEGRAM_BOT_TOKEN) {
-      const adminIds = String(env.TELEGRAM_ADMIN_IDS ?? '')
-        .split(',')
-        .map((x) => x.trim())
-        .filter(Boolean);
-
-      for (const id of adminIds.slice(0, 3)) {
-        await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: Number(id),
-            text: `⚠️ LLWA: ${failures} تلاش ناموفق AI در یک ساعت گذشته. providers را در پنل بررسی کن.`,
-          }),
-        }).catch(() => undefined);
-      }
+    if (failures >= 5) {
+      // ⚠️ قبلاً اینجا به ادمین‌ها در تلگرام پیام می‌رفت. با منسوخ شدن
+      // مینی‌اپ، هشدار به لاگ منتقل شد تا در پنل ابری دیده شود.
+      console.error(
+        `[cron:alert] ${failures} failed AI attempts in the last hour — check providers in the admin panel`
+      );
       alerted = true;
     }
   } catch {
@@ -216,65 +206,3 @@ const NUDGE: Record<string, string> = {
  * حالا `reminderOn` و `reminderTime` (HH:MM) از `app_settings` خوانده می‌شود
  * و این تابع از کرونِ هر ۵ دقیقه اجرا می‌شود تا پنجرهٔ ±۵ دقیقه‌ای دقیق باشد.
  */
-export async function runDailyNudges(env: Env, limit = 500): Promise<{ sent: number }> {
-  if (!env.TELEGRAM_BOT_TOKEN) return { sent: 0 };
-
-  const r = repo(env);
-  const users = await r.listReminderTargets(limit);
-  const prefsMap = await r.listAllUserPrefs();
-  let sent = 0;
-
-  for (const u of users) {
-    const prefs = prefsMap.get(u.id);
-    // اگر کاربر یادآور را خاموش کرده، پیام نده
-    if (prefs?.reminderOn === false) continue;
-
-    const [targetHour, targetMinute] = (prefs?.reminderTime ?? '09:00')
-      .split(':')
-      .map((n) => Number(n) || 0);
-
-    // ساعت و دقیقهٔ محلی کاربر
-    let localHour: number;
-    let localMinute: number;
-    try {
-      const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone: u.timezone || 'UTC',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }).formatToParts(new Date());
-      const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
-      localHour = get('hour') % 24;
-      localMinute = get('minute');
-    } catch {
-      localHour = new Date().getUTCHours();
-      localMinute = new Date().getUTCMinutes();
-    }
-
-    // پنجرهٔ ۵ دقیقه‌ای تا با کرونِ هر ۵ دقیقه یک بار بخورد
-    const inWindow =
-      localHour === targetHour &&
-      localMinute >= (targetMinute ?? 0) &&
-      localMinute < (targetMinute ?? 0) + 5;
-    if (!inWindow) continue;
-
-    const lang = u.ui_language ?? 'fa';
-    const template = NUDGE[lang] ?? NUDGE.en!;
-    const text = template.replace('{name}', u.first_name ?? '');
-    try {
-      const res = await fetch(
-        `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: u.telegram_id, text }),
-        }
-      );
-      if (res.ok) sent += 1;
-    } catch {
-      /* کاربر ربات را بلاک کرده یا شبکه خطا داد — ادامه بده */
-    }
-  }
-
-  return { sent };
-}

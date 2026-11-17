@@ -31,7 +31,8 @@ export async function handleSupportCreate(
   context: RequestContext
 ): Promise<Response> {
   const { env, requestId, userId, telegramId } = context;
-  if (!userId || !telegramId) {
+  // ⚠️ کاربران اپ موبایل telegramId ندارند — فقط userId لازم است.
+  if (!userId) {
     return jsonError('UNAUTHORIZED', 'No identity', requestId, env, 401);
   }
 
@@ -49,7 +50,7 @@ export async function handleSupportCreate(
   const r = repo(env);
   const ticket = await r.createSupportTicket({
     userId,
-    telegramId,
+    telegramId: telegramId ?? null,
     subject,
     category,
     body: message,

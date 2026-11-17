@@ -1,10 +1,4 @@
 export interface Env {
-  // Telegram
-  TELEGRAM_BOT_TOKEN: string;
-  TELEGRAM_WEBHOOK_SECRET?: string;
-  TELEGRAM_ADMIN_BOT_TOKEN?: string;
-  TELEGRAM_ADMIN_IDS?: string;
-
   // Supabase
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;

@@ -64,7 +64,6 @@ import { SupabaseClient } from '../services/supabase';
 import { QStashClient } from '../services/qstash';
 import type { AiEngine } from '../services/ai-engine';
 import { hasMediaStorage } from '../services/media';
-import { isAdminFromEnv } from './admin';
 import { toUserProfile } from '../services/repository';
 
 /**
@@ -90,6 +89,18 @@ interface ResolvedUser {
   repo: ContentRepository;
 }
 
+/**
+ * یافتن کاربر از هویت نشست.
+ *
+ * ⚠️ هویت اصلی `userId` است. telegramId فقط برای کاربران قدیمی ربات
+ * باقی مانده؛ برای هر کاربری که با گوگل/دمو وارد شده، null است.
+ */
+async function resolveUserByIdentity(r: ContentRepository, context: RequestContext) {
+  return context.userId
+    ? r.findUserById(context.userId)
+    : r.findUserByTelegramId(context.telegramId!);
+}
+
 async function requireUser(
   context: RequestContext
 ): Promise<ResolvedUser | { error: string }> {
@@ -97,7 +108,7 @@ async function requireUser(
   if (!telegramId) return { error: 'no identity' };
 
   const r = repo(env);
-  const user = await r.findUserByTelegramId(telegramId);
+  const user = await resolveUserByIdentity(r, context);
   if (!user) return { error: 'user not found' };
 
   return {
@@ -130,7 +141,7 @@ export async function handleHome(
 
   const subscription = await r.getActiveSubscription(user.id);
   const profile = toUserProfile(user, subscription, {
-    isAdmin: isAdminFromEnv(env, user.telegram_id),
+    isAdmin: Boolean(user.is_admin),
   });
 
   // چرخه فعال یا چرخه در حال تولید
@@ -1027,8 +1038,7 @@ export async function handleAdminMap(
   request: Request,
   context: RequestContext
 ): Promise<Response> {
-  const { env, requestId, telegramId } = context;
-  if (!telegramId) return jsonError('UNAUTHORIZED', 'No identity', requestId, env, 401);
+  const { env, requestId } = context;
 
   const resolved = await requireUser(context);
   if ('error' in resolved) {
@@ -1036,7 +1046,7 @@ export async function handleAdminMap(
   }
   const { user, repo: r } = resolved;
 
-  if (!isAdminFromEnv(env, telegramId) && !user.is_admin) {
+  if (!user.is_admin) {
     return jsonError('UNAUTHORIZED', 'admin only', requestId, env, 403);
   }
 
@@ -1770,8 +1780,7 @@ export async function handleSetCoinRate(
   request: Request,
   context: RequestContext
 ): Promise<Response> {
-  const { env, requestId, telegramId } = context;
-  if (!telegramId) return jsonError('UNAUTHORIZED', 'No identity', requestId, env, 401);
+  const { env, requestId } = context;
 
   const resolved = await requireUser(context);
   if ('error' in resolved) {
@@ -1779,7 +1788,7 @@ export async function handleSetCoinRate(
   }
   const { user, repo: r } = resolved;
 
-  const admin = isAdminFromEnv(env, telegramId) || Boolean(user.is_admin);
+  const admin = Boolean(user.is_admin);
   if (!admin) return jsonError('UNAUTHORIZED', 'admin only', requestId, env, 403);
 
   const body = (await readJson(request)) as {
@@ -3531,8 +3540,7 @@ export async function handleOnboarding(
   request: Request,
   context: RequestContext
 ): Promise<Response> {
-  const { env, requestId, telegramId } = context;
-  if (!telegramId) return jsonError('UNAUTHORIZED', 'No identity', requestId, env, 401);
+  const { env, requestId } = context;
 
   const body = await readJson(request);
   const parsed = onboardingRequestSchema.safeParse(body);
@@ -3541,7 +3549,7 @@ export async function handleOnboarding(
   }
 
   const r = repo(env);
-  const user = await r.findUserByTelegramId(telegramId);
+  const user = await resolveUserByIdentity(r, context);
   if (!user) return jsonError('NOT_FOUND', 'User not found', requestId, env, 404);
 
   await r.updateUser(user.id, {
@@ -3585,8 +3593,7 @@ export async function handleUpdateProfile(
   request: Request,
   context: RequestContext
 ): Promise<Response> {
-  const { env, requestId, telegramId } = context;
-  if (!telegramId) return jsonError('UNAUTHORIZED', 'No identity', requestId, env, 401);
+  const { env, requestId } = context;
 
   const body = await readJson(request);
   const parsed = updateProfileSchema.safeParse(body);
@@ -3595,7 +3602,7 @@ export async function handleUpdateProfile(
   }
 
   const r = repo(env);
-  const user = await r.findUserByTelegramId(telegramId);
+  const user = await resolveUserByIdentity(r, context);
   if (!user) return jsonError('NOT_FOUND', 'User not found', requestId, env, 404);
 
   const patch: Record<string, unknown> = {};
@@ -3635,7 +3642,7 @@ export async function handleUpdateProfile(
   const effective = await r.getUserPrefs(user.id);
 
   const profile = toUserProfile(updated, subscription, {
-    isAdmin: isAdminFromEnv(env, telegramId),
+    isAdmin: Boolean(user.is_admin),
   });
   profile.dailyMinutes = effective.dailyMinutes;
   profile.dialect = effective.dialect;
@@ -3675,11 +3682,10 @@ export async function handleDeleteAccount(
   request: Request,
   context: RequestContext
 ): Promise<Response> {
-  const { env, requestId, telegramId } = context;
-  if (!telegramId) return jsonError('UNAUTHORIZED', 'No identity', requestId, env, 401);
+  const { env, requestId } = context;
 
   const r = repo(env);
-  const user = await r.findUserByTelegramId(telegramId);
+  const user = await resolveUserByIdentity(r, context);
   if (!user) return jsonSuccess({ deleted: true }, requestId, env);
 
   // cascade در دیتابیس بقیه را پاک می‌کند

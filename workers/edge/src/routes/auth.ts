@@ -1,24 +1,19 @@
 import {
-  authRequestSchema,
-  authLinkRequestSchema,
   googleAuthRequestSchema,
   demoAuthRequestSchema,
   adminAuthRequestSchema,
 } from '@llwa/shared';
-import { SECURITY, languageFromTelegramCode } from '@llwa/shared';
+import { SECURITY } from '@llwa/shared';
 import type { Env, RequestContext } from '../types';
 import { jsonError, jsonSuccess, readJson } from '../lib/response';
-import { validateInitData } from '../lib/telegram-auth';
-import { verifyGoogleIdToken } from '../lib/google-auth';
+import { verifyGoogleIdToken, type GoogleIdentity } from '../lib/google-auth';
 import { signJwt } from '../lib/jwt';
-import { consumeLinkToken } from '../lib/link-token';
 import {
   ContentRepository,
   toUserProfile,
   type UserRow,
 } from '../services/repository';
 import { SupabaseClient } from '../services/supabase';
-import { isAdminFromEnv } from './admin';
 
 /** اطلاعات کاربر تلگرام — مشترک بین دو مسیر ورود */
 interface TelegramIdentity {
@@ -35,66 +30,6 @@ interface TelegramIdentity {
  *
  * مسیر ورود مینی‌اپ تلگرام: initData امضاشده را با JWT کوتاه‌عمر عوض می‌کند.
  * (اپ موبایل از `auth-google` استفاده می‌کند.)
- */
-export async function handleAuth(
-  request: Request,
-  context: RequestContext
-): Promise<Response> {
-  const { env, requestId } = context;
-
-  const body = await readJson(request);
-  const parsed = authRequestSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return jsonError(
-      'VALIDATION_ERROR',
-      'initData is required',
-      requestId,
-      env,
-      400
-    );
-  }
-
-  const validation = await validateInitData(
-    parsed.data.initData,
-    env.TELEGRAM_BOT_TOKEN,
-    { maxAgeSeconds: SECURITY.initDataMaxAgeSeconds }
-  );
-
-  if (!validation.ok || !validation.user) {
-    return jsonError(
-      'INVALID_INIT_DATA',
-      validation.error ?? 'initData validation failed',
-      requestId,
-      env,
-      401,
-      'errors.invalid_session'
-    );
-  }
-
-  const tgUser = validation.user;
-
-  return issueTelegramSession(env, requestId, {
-    id: tgUser.id,
-    first_name: tgUser.first_name,
-    last_name: tgUser.last_name,
-    username: tgUser.username,
-    photo_url: tgUser.photo_url,
-    language_code: tgUser.language_code,
-  });
-}
-
-/**
- * POST /gate?action=auth-google
- *
- * ورود اپ موبایل با حساب گوگل.
- *
- * کلاینت با Google Sign-In یک `idToken` می‌گیرد و اینجا می‌فرستد.
- * ما امضا/صادرکننده/مخاطب/انقضا را با JWKS گوگل بررسی می‌کنیم، سپس
- * کاربر را upsert و JWT خودمان را صادر می‌کنیم.
- *
- * ⚠️ هیچ‌وقت به فیلدهای پروفایل که کلاینت می‌فرستد اعتماد نکن — فقط
- * `idToken` را قبول کن و بقیه را از داخل توکن بخوان.
  */
 export async function handleAuthGoogle(
   request: Request,
@@ -160,7 +95,6 @@ export async function handleAuthGoogle(
   });
 
   return finalizeSession(env, requestId, repo, user, {
-    telegramId: undefined,
     googleSub: identity.sub,
     email: identity.email,
     detectedLanguage,
@@ -176,89 +110,14 @@ export async function handleAuthGoogle(
  * ربات در `/start` یک توکن یک‌بارمصرف می‌سازد و به URL دکمه اضافه
  * می‌کند. اینجا آن توکن بررسی و سوزانده می‌شود.
  */
-export async function handleAuthLink(
-  request: Request,
-  context: RequestContext
-): Promise<Response> {
-  const { env, requestId } = context;
-
-  const body = await readJson(request);
-  const parsed = authLinkRequestSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return jsonError(
-      'VALIDATION_ERROR',
-      'token is required',
-      requestId,
-      env,
-      400
-    );
-  }
-
-  const record = await consumeLinkToken(env, parsed.data.token);
-
-  if (!record) {
-    return jsonError(
-      'INVALID_INIT_DATA',
-      'Link token is invalid, expired, or already used',
-      requestId,
-      env,
-      401,
-      'errors.invalid_session'
-    );
-  }
-
-  // نام کاربر را از تلگرام می‌گیریم تا پروفایل کامل باشد.
-  // (توکن فقط id را حمل می‌کند تا اطلاعات شخصی در URL لو نرود)
-  const fallback: TelegramIdentity = {
-    id: record.telegramId,
-    first_name: `User ${record.telegramId}`,
-    language_code: record.languageCode,
-  };
-
-  return issueTelegramSession(env, requestId, fallback);
-}
-
-/**
- * صدور JWT برای مسیر تلگرام.
- */
-async function issueTelegramSession(
-  env: Env,
-  requestId: string,
-  tgUser: TelegramIdentity
-): Promise<Response> {
-  const detectedLanguage = languageFromTelegramCode(tgUser.language_code);
-
-  const db = new SupabaseClient(env);
-  const repo = new ContentRepository(db, env);
-
-  const user = await repo.upsertUser({
-    telegramId: tgUser.id,
-    firstName: tgUser.first_name,
-    lastName: tgUser.last_name,
-    username: tgUser.username,
-    photoUrl: tgUser.photo_url,
-    uiLanguage: detectedLanguage,
-    languageSource: 'TELEGRAM',
-  });
-
-  return finalizeSession(env, requestId, repo, user, {
-    telegramId: tgUser.id,
-    detectedLanguage,
-  });
-}
-
+/** هویت نشست — فقط آنچه برای ساخت JWT لازم است */
 interface SessionIdentity {
-  telegramId?: number;
-  googleSub?: string;
+  /** شناسهٔ گوگل (یا شناسهٔ مصنوعی در حالت دمو/پنل) */
+  googleSub: string;
   email?: string;
   detectedLanguage: string;
 }
 
-/**
- * منطق مشترک هر سه مسیر ورود: بررسی مسدودی، تعیین نقش ادمین، صدور JWT،
- * و ساخت پروفایل کامل (شامل ترجیحات).
- */
 async function finalizeSession(
   env: Env,
   requestId: string,
@@ -284,7 +143,7 @@ async function finalizeSession(
   // تب «مدیران» او را غیرمجاز می‌بیند («فقط مدیر اصلی به این بخش دسترسی دارد»).
   const dbRole = (user as { admin_role?: string | null }).admin_role ?? null;
   const envAdmin =
-    isAdminFromEnv(env, identity.telegramId) || isAdminEmail(env, identity.email);
+    isAdminEmail(env, identity.email);
   const adminRole = envAdmin ? 'SUPER_ADMIN' : dbRole;
   const isAdmin = Boolean(adminRole);
 
@@ -299,7 +158,6 @@ async function finalizeSession(
       // ⚠️ نام‌ها باید دقیقاً با AuthClaims بخوانند (camelCase).
       // میدلور auth.ts این فیلدها را مستقیم روی context می‌گذارد.
       // هویت اصلی `userId` است؛ telegramId/googleSub اختیاری‌اند.
-      telegramId: identity.telegramId,
       googleSub: identity.googleSub,
       email: identity.email,
       userId: user.id,
@@ -518,7 +376,7 @@ export async function handleMe(
   const subscription = await repo.getActiveSubscription(user.id);
   const dbRole = (user as { admin_role?: string | null }).admin_role ?? null;
   const adminRole =
-    isAdminFromEnv(env, telegramId) || isAdminEmail(env, email)
+    isAdminEmail(env, email)
       ? 'SUPER_ADMIN'
       : dbRole;
   const profile = toUserProfile(user, subscription, {

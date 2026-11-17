@@ -18,11 +18,9 @@ import {
   handleAdminFlagSet,
 } from './routes/admin-console';
 import {
-  handleAuth,
   handleAuthGoogle,
   handleAuthDemo,
   handleAuthAdmin,
-  handleAuthLink,
   handleMe,
   handleHealth,
 } from './routes/auth';
@@ -86,7 +84,6 @@ import { handleMediaSpeak, handleMediaFile, isMediaRequest } from './routes/medi
 import {
   runHourlyMaintenance,
   runBackgroundGeneration,
-  runDailyNudges,
 } from './services/cron';
 import {
   handleAdminListProviders,
@@ -97,8 +94,6 @@ import {
   handleAdminTestProvider,
   handleAdminListProviderModels,
 } from './routes/admin-ai';
-import { handleTelegramWebhook } from './routes/telegram-bot';
-import { handleAdminWebhook } from './routes/admin-bot';
 
 /**
  * ══════════════════════════════════════════════════════════════════
@@ -272,14 +267,9 @@ export default {
         );
       } else if (cron === '*/5 * * * *') {
         const res = await runBackgroundGeneration(env);
-        // یادآور روزانه در پنجرهٔ ±۵ دقیقهٔ ساعتِ انتخابی کاربر
-        const nudge = await runDailyNudges(env);
         console.log(
-          `[cron:gen] cycles=${res.cycles} lessons=${res.lessons} retried=${res.retried} failed=${res.failed} nudges=${nudge.sent}`
+          `[cron:gen] cycles=${res.cycles} lessons=${res.lessons} retried=${res.retried} failed=${res.failed}`
         );
-      } else if (cron === '0 9 * * *') {
-        const res = await runDailyNudges(env);
-        console.log(`[cron:nudge] sent=${res.sent}`);
       } else {
         // کرون ناشناخته: کار نگهداری سبک را انجام بده
         await runHourlyMaintenance(env);
@@ -366,8 +356,6 @@ function isKnownPath(url: URL, env: Env, action: string): boolean {
   if (path === env.GATE_PATH) return Boolean(action);
 
   // وب‌هوک‌ها و مسیرهای داخلی
-  if (path.endsWith('/telegram/webhook')) return true;
-  if (path.endsWith('/telegram/admin-webhook')) return true;
   if (path.endsWith('/internal/queue')) return true;
 
   // سلامت‌سنجی ساده (بدون افشای ساختار)
@@ -391,12 +379,6 @@ async function dispatch(
   const path = url.pathname.replace(/\/$/, '');
 
   // ── وب‌هوک‌ها ────────────────────────────────────────────────────
-  if (path.endsWith('/telegram/webhook')) {
-    return handleTelegramWebhook(request, context);
-  }
-  if (path.endsWith('/telegram/admin-webhook')) {
-    return handleAdminWebhook(request, context);
-  }
   if (path.endsWith('/internal/queue')) {
     return handleQueueCallback(request, context, url, env);
   }
@@ -409,16 +391,12 @@ async function dispatch(
   // ── دروازه اصلی ─────────────────────────────────────────────────
   switch (action) {
     // auth & profile
-    case 'auth':
-      return handleAuth(request, context);
     case 'auth-google':
       return handleAuthGoogle(request, context);
     case 'auth-demo':
       return handleAuthDemo(request, context);
     case 'auth-admin':
       return handleAuthAdmin(request, context);
-    case 'auth-link':
-      return handleAuthLink(request, context);
     case 'me':
       return handleMe(request, context);
     case 'health':

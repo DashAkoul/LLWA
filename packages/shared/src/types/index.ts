@@ -18,7 +18,6 @@ export type PlanType =
 export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
 
 export type SubscriptionSource =
-  | 'TELEGRAM_STARS'
   | 'ADMIN_GIFT'
   | 'TRIAL'
   | 'ZARINPAL'
@@ -78,15 +77,6 @@ export type TelemetryEventType =
 // User
 // ─────────────────────────────────────────────────────────────────────
 
-export interface TelegramUser {
-  id: number;
-  first_name: string;
-  last_name?: string;
-  username?: string;
-  language_code?: string;
-  is_premium?: boolean;
-  photo_url?: string;
-}
 
 export interface SubscriptionInfo {
   planType: PlanType;
@@ -103,17 +93,16 @@ export interface UserProfile {
    * شناسهٔ تلگرام — فقط اگر کاربر از ربات آمده باشد.
    * در اپ موبایل (ورود با گوگل) این مقدار `null` است.
    */
-  telegramId: number | null;
   /** ایمیل حساب گوگل (اگر با گوگل وارد شده باشد) */
   email?: string | null;
   /** روش ورود کاربر */
-  authProvider?: 'GOOGLE' | 'TELEGRAM';
+  authProvider?: 'GOOGLE';
   firstName: string | null;
   lastName: string | null;
   username: string | null;
   photoUrl: string | null;
   uiLanguage: SupportedUiLanguage;
-  languageSource: 'TELEGRAM' | 'MANUAL' | 'GOOGLE';
+  languageSource: 'MANUAL' | 'GOOGLE';
   targetLanguage: SupportedTargetLanguage;
   /** گویش انتخابی مثل en-US (اختیاری) */
   dialect?: string | null;
@@ -484,7 +473,6 @@ export interface StarInvoice {
 export interface AdminUserSummary {
   id: string;
   /** برای کاربران اپ موبایل (ورود با گوگل) `null` است */
-  telegramId: number | null;
   /** ایمیل — برای کاربران گوگل */
   email?: string | null;
   displayName: string;
@@ -500,7 +488,6 @@ export interface AdminUserSummary {
 }
 
 export interface GiftSubscriptionRequest {
-  telegramId: number;
   planType: PlanType;
   note?: string;
   /** اگر true باشد، به اشتراک فعال اضافه می‌شود؛ وگرنه جایگزین */
@@ -685,6 +672,7 @@ export type ApiErrorCode =
   | 'VALIDATION_ERROR'
   | 'INTERNAL_ERROR'
   | 'AI_UNAVAILABLE'
+  | 'PAYMENT_UNAVAILABLE'
   | 'INVALID_GOOGLE_TOKEN'
   | 'SERVER_MISCONFIGURED';
 

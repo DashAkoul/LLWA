@@ -9,21 +9,18 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:web": "npm run dev -w @llwa/web",
     "dev:admin": "npm run dev -w @llwa/admin",
     "dev:edge": "npm run dev -w @llwa/edge",
     "dev:mobile": "npm --prefix mobile run start",
-    "build": "npm run build -w @llwa/shared && npm run build -w @llwa/edge && npm run build -w @llwa/web && npm run build -w @llwa/admin",
+    "build": "npm run build -w @llwa/shared && npm run build -w @llwa/edge && npm run build -w @llwa/admin",
     "build:shared": "npm run build -w @llwa/shared",
     "build:edge": "npm run build -w @llwa/edge",
-    "build:web": "npm run build -w @llwa/web",
     "build:admin": "npm run build -w @llwa/admin",
     "typecheck": "npm run typecheck --workspaces --if-present && npm --prefix mobile run typecheck",
     "test": "npm run test --workspaces --if-present",
     "deploy:edge": "bash scripts/deploy-edge.sh",
-    "deploy:web": "bash scripts/deploy-frontend-worker.sh",
     "deploy:admin": "bash scripts/deploy-admin.sh",
-    "deploy:all": "bash scripts/deploy-edge.sh && bash scripts/deploy-frontend-worker.sh && bash scripts/deploy-admin.sh"
+    "deploy:all": "bash scripts/deploy-edge.sh && bash scripts/deploy-admin.sh"
   },
   "devDependencies": {
     "typescript": "^5.6.3"

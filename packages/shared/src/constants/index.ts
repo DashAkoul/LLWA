@@ -412,14 +412,6 @@ export const LEARNING_GOALS: { code: string; labelFa: string; labelEn: string; i
 ];
 
 /** نگاشت زبان تلگرام به زبان رابط */
-export function languageFromTelegramCode(code: string | undefined): SupportedUiLanguage {
-  if (!code) return DEFAULT_UI_LANGUAGE;
-  const base = code.split('-')[0]?.toLowerCase() ?? '';
-  const supported: SupportedUiLanguage[] = ['fa', 'en', 'ar', 'tr', 'ru'];
-  return (supported as string[]).includes(base)
-    ? (base as SupportedUiLanguage)
-    : DEFAULT_UI_LANGUAGE;
-}
 
 // ─────────────────────────────────────────────────────────────────────
 // Security

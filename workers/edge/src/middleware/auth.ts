@@ -25,12 +25,6 @@ export function resolveRoute(url: URL): RouteMeta {
   const path = url.pathname;
 
   // مسیرهای وب‌هوک تلگرام
-  if (path.endsWith('/telegram/webhook')) {
-    return { action: 'telegram-webhook', routeClass: 'PUBLIC' };
-  }
-  if (path.endsWith('/telegram/admin-webhook')) {
-    return { action: 'telegram-admin-webhook', routeClass: 'PUBLIC' };
-  }
   // callback صف
   if (path.endsWith('/internal/queue')) {
     return { action: internal || 'queue', routeClass: 'INTERNAL' };
@@ -41,11 +35,9 @@ export function resolveRoute(url: URL): RouteMeta {
 
 function routeClassForAction(action: string): RouteClass {
   switch (action) {
-    case 'auth':
     case 'auth-google':
     case 'auth-demo':
     case 'auth-admin':
-    case 'auth-link':
     case 'health':
     case 'plans':
       return 'PUBLIC';
@@ -262,15 +254,6 @@ async function resolveAdminRole(
     if (adminEmails.includes(email)) return 'SUPER_ADMIN';
   }
 
-  const telegramId = claims.telegramId;
-  if (typeof telegramId === 'number') {
-    const ids = (env.TELEGRAM_ADMIN_IDS ?? '')
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .map(Number);
-    if (ids.includes(telegramId)) return 'SUPER_ADMIN';
-  }
 
   if (!claims.userId) return null;
 

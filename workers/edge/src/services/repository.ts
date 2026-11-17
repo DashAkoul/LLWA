@@ -1869,7 +1869,8 @@ export class ContentRepository {
 
   async createSupportTicket(input: {
     userId: string;
-    telegramId: number;
+    /** فقط برای کاربران قدیمی ربات — در اپ موبایل null است */
+    telegramId: number | null;
     subject: string;
     category: string;
     body: string;
@@ -2610,17 +2611,14 @@ export function toUserProfile(
 
   return {
     id: user.id,
-    telegramId: user.telegram_id ?? null,
     email: user.email ?? null,
-    authProvider: (user.auth_provider ?? (user.telegram_id ? 'TELEGRAM' : 'GOOGLE')) as
-      | 'GOOGLE'
-      | 'TELEGRAM',
+    authProvider: (user.auth_provider ?? 'GOOGLE') as 'GOOGLE',
     firstName: user.first_name,
     lastName: user.last_name,
     username: user.username,
     photoUrl: user.photo_url,
     uiLanguage: (user.ui_language ?? 'fa') as UserProfile['uiLanguage'],
-    languageSource: user.language_source,
+    languageSource: user.language_source as UserProfile['languageSource'],
     targetLanguage: user.target_language as UserProfile['targetLanguage'],
     // گویش و بودجهٔ روزانه — ممکن است ستون‌ها هنوز نباشند (اختیاری)
     dialect: (user as { dialect?: string | null }).dialect ?? null,

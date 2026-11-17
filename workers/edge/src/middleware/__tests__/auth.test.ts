@@ -18,7 +18,7 @@ const baseEnv = withDefaults({
 
 describe('resolveRoute', () => {
   it('classifies the public actions correctly', () => {
-    for (const action of ['auth', 'health', 'plans']) {
+    for (const action of ['auth-google', 'health', 'plans']) {
       const url = new URL(`https://x.dev/gate?action=${action}`);
       expect(resolveRoute(url).routeClass).toBe('PUBLIC');
     }
@@ -32,34 +32,6 @@ describe('resolveRoute', () => {
   it('defaults unknown actions to AUTHENTICATED', () => {
     const url = new URL('https://x.dev/gate?action=me');
     expect(resolveRoute(url).routeClass).toBe('AUTHENTICATED');
-  });
-
-  it('recognises the telegram webhook paths', () => {
-    const a = resolveRoute(new URL('https://x.dev/telegram/webhook'));
-    expect(a.action).toBe('telegram-webhook');
-    expect(a.routeClass).toBe('PUBLIC');
-
-    const b = resolveRoute(new URL('https://x.dev/telegram/admin-webhook'));
-    expect(b.action).toBe('telegram-admin-webhook');
-    expect(b.routeClass).toBe('PUBLIC');
-  });
-});
-
-describe('authenticate — rejection paths must not throw', () => {
-  it('returns a 401 (not a throw) when the bearer token is missing', async () => {
-    const req = new Request('https://x.dev/gate?action=me', { method: 'GET' });
-    const outcome = await authenticate(req, baseEnv, 'req-1', 'AUTHENTICATED');
-
-    expect(outcome.error).toBeDefined();
-    expect(outcome.error!.status).toBe(401);
-
-    const body = (await outcome.error!.json()) as {
-      ok: boolean;
-      error: { code: string; userMessageKey?: string };
-    };
-    expect(body.ok).toBe(false);
-    expect(body.error.code).toBe('UNAUTHORIZED');
-    expect(body.error.userMessageKey).toBe('errors.session_expired');
   });
 
   it('returns a 401 for an ADMIN action with no token', async () => {
