@@ -15,9 +15,11 @@ learner actually did — never by the model re-inventing the route.
 ```
 mobile/               React Native app (Expo SDK 58) — the learner experience
 apps/admin/           Web admin console (Vite + React) — deployed to Cloudflare Pages
+apps/site/            Public static site (home, privacy, terms) — no build step
 apps/web/             Legacy web app kept as a browser fallback / reference UI
 workers/edge/         API on Cloudflare Workers (router + services + AI orchestration)
 workers/web/          Static host Worker for apps/web
+workers/site/         Static host Worker for apps/site (llwa.infolange.ir)
 packages/shared/      Types, zod schemas, constants, and translations shared by all clients
 supabase/migrations/  Postgres schema (Supabase)
 scripts/              Deploy, backup, and smoke-test helpers
@@ -39,6 +41,7 @@ docs/                 API contracts, retention policy, backup & recovery
 | `api.infolange.ir` | API gateway | Cloudflare Worker `llwa-edge` |
 | `app.infolange.ir` | legacy web app | Cloudflare Worker `llwa-web` |
 | `admin.infolange.ir` | admin console | Cloudflare Pages `llwa-admin` |
+| `llwa.infolange.ir` | public site: home, privacy, terms | Workers Assets `llwa-site-edge` (Pages `llwa-site` mirrors it) |
 
 Custom domains are declared in each `wrangler.toml` with `custom_domain = true`, so the
 Worker creates its own DNS record on deploy. The apex domain stays untouched on purpose.
