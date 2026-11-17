@@ -1,0 +1,5 @@
+# LLWA public site — all pages are public and indexable
+User-agent: *
+Allow: /
+
+Sitemap: https://llwa.infolange.ir/sitemap.xml
