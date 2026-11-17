@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import { activePrompt, mergePrompt } from './prompt-registry';
 import {
   calibrationTestSchema,
   roleplayStartSchema,
@@ -190,9 +191,12 @@ export class AiEngine {
       required: ['items'],
     };
 
+    // پرامپت ادمین (اگر نسخهٔ فعالی در پنل باشد) قبل از قواعد سیستمی می‌آید
+    const override = await activePrompt(this.env, 'placement-test');
+
     const r = await this.runChain(
       calibrationTestSchema,
-      [
+      mergePrompt(override, [
         `You build a short placement test.`,
         `Target language: ${input.user.targetLanguage}. Learner UI language: ${input.user.uiLanguage}.`,
         difficulty === 'hard'
@@ -206,7 +210,7 @@ export class AiEngine {
         `  in the target language, one of which is exactly "term"; do not include meanings.`,
         `Set "correctIndex" to the index of the correct option. Never repeat a term.`,
         `Return only the JSON object.`,
-      ].join('\n'),
+      ].join('\n')),
       `Build the 10-item placement test for ${input.user.targetLanguage}.`,
       'calibration',
       jsonSchema
@@ -542,9 +546,11 @@ export class AiEngine {
     model: string;
     totalMs: number;
   }> {
+    const override = await activePrompt(this.env, 'lesson-content');
+
     const r = await this.runChain(
       generatedLessonSchema,
-      buildLessonSystemPrompt(input),
+      mergePrompt(override, buildLessonSystemPrompt(input)),
       buildLessonUserPrompt(input, day, outline),
       `lesson-${day.dayNumber}`
     );
@@ -576,9 +582,11 @@ export class AiEngine {
     model: string;
     totalMs: number;
   }> {
+    const override = await activePrompt(this.env, 'lesson-content');
+
     const r = await this.runChain(
       lessonSkeletonSchema,
-      buildLessonSkeletonSystemPrompt(input, knownTerms),
+      mergePrompt(override, buildLessonSkeletonSystemPrompt(input, knownTerms)),
       buildLessonSkeletonUserPrompt(input, day, outline, knownTerms),
       'lesson-skeleton'
     );

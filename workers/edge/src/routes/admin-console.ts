@@ -1,6 +1,10 @@
 import type { Env, RequestContext } from '../types';
 import { jsonError, jsonSuccess, readJson } from '../lib/response';
 import { SupabaseClient } from '../services/supabase';
+import {
+  PROMPT_TASK_KEYS,
+  isPromptTaskKey,
+} from '../services/prompt-registry';
 
 /**
  * کنسول مدیریت — پرامپت‌ها و فلگ‌های قابلیت.
@@ -24,21 +28,6 @@ export interface FlagRow {
   enabled: boolean;
   description: string | null;
   updated_at: string;
-}
-
-/** کلیدهای مجاز — جلوی نوشتن پرامپت برای وظیفهٔ ناموجود را می‌گیرد */
-export const PROMPT_TASK_KEYS = [
-  'placement-test',
-  'goal-to-steps',
-  'step-to-cycles',
-  'cycle-to-lessons',
-  'lesson-content',
-] as const;
-
-export type PromptTaskKey = (typeof PROMPT_TASK_KEYS)[number];
-
-function isTaskKey(value: unknown): value is PromptTaskKey {
-  return typeof value === 'string' && (PROMPT_TASK_KEYS as readonly string[]).includes(value);
 }
 
 // ═════════════════════════════════════════════════════════════════════
@@ -93,7 +82,7 @@ export async function handleAdminPromptSave(
     activate?: boolean;
   }>(request);
 
-  if (!isTaskKey(body?.taskKey)) {
+  if (!isPromptTaskKey(body?.taskKey)) {
     return jsonError(
       'VALIDATION_ERROR',
       `taskKey must be one of: ${PROMPT_TASK_KEYS.join(', ')}`,
@@ -316,41 +305,5 @@ async function writeAudit(
     });
   } catch {
     // audit نباید عملیات اصلی را بشکند
-  }
-}
-
-/**
- * پرامپت فعال یک وظیفه — برای مصرف در موتور AI.
- *
- * اگر نسخهٔ فعالی در دیتابیس نباشد `null` برمی‌گردد تا کد از پرامپت
- * پیش‌فرض خودش استفاده کند (رفتار محافظه‌کارانه).
- */
-export async function activePrompt(env: Env, taskKey: PromptTaskKey): Promise<string | null> {
-  try {
-    const db = new SupabaseClient(env);
-    const rows = (await db.select<{ body: string }>('ai_prompts', {
-      select: 'body',
-      task_key: `eq.${taskKey}`,
-      is_active: 'eq.true',
-      limit: '1',
-    })) as { body: string }[];
-    return rows?.[0]?.body ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/** آیا یک قابلیت روشن است؟ */
-export async function isFlagEnabled(env: Env, key: string): Promise<boolean> {
-  try {
-    const db = new SupabaseClient(env);
-    const rows = (await db.select<{ enabled: boolean }>('feature_flags', {
-      select: 'enabled',
-      key: `eq.${key}`,
-      limit: '1',
-    })) as { enabled: boolean }[];
-    return Boolean(rows?.[0]?.enabled);
-  } catch {
-    return false;
   }
 }

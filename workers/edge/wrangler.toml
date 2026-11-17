@@ -97,6 +97,8 @@ class_name = "CycleGenerationWorkflow"
 MINI_APP_URL = "https://app.infolange.ir"
 SELF_URL = "https://api.infolange.ir"
 GATE_PATH = "/llwa74/9xkr2mqv/v1/gate"
+# ⚠️ MVP: ورود آزمایشی بدون گوگل. برای انتشار واقعی "false" شود.
+DEMO_MODE = "true"
 AI_PRIMARY_MODEL = "gemini-3.8-flash"
 AI_FALLBACK_MODELS = "deepseek-chat,claude-3-5-sonnet-latest"
 ENABLE_PAYLOAD_ENCRYPTION = "false"
