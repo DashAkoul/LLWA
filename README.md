@@ -1,265 +1,215 @@
-# LLWA لهجه — Adaptive AI Language Tutor
+# LLWA — Learn Language With AI
 
-A **serverless, adaptive AI language tutor** delivered as a **Telegram Mini App**.
-No VPS, no containers, no n8n — the entire backend runs on Cloudflare's edge plus
-managed Postgres.
+An adaptive, AI-driven language tutor shipped as a **native mobile app** (React Native / Expo)
+with a **separate web admin console** and a **serverless edge backend** on Cloudflare.
 
-Users learn in **7-day cycles**: five days of teaching, a sixth day of *hidden*
-assessment disguised as an ordinary lesson, and a seventh day of consolidation
-with an encouraging app lock. When a cycle closes, the engine reads the learner's
-telemetry — pauses, mistakes, response speed — and asks an AI to author the next
-cycle from that evidence. This is **Delta Patching**.
-
----
-
-## Why this shape
-
-| Constraint in the brief | What we built |
-| --- | --- |
-| No VPS, no n8n | Cloudflare Workers (edge gateway + AI orchestration) and Supabase (Postgres + Storage) |
-| Cost must stay near zero between users | No always-on compute; AI tokens are only spent when a cycle actually completes |
-| Frontend must be modular | `apps/tma` — one folder per feature, no giant component files |
-| Must survive AI failure | Three-provider failover with a repair round-trip before giving up |
-| Must not be abused for tokens | Route obfuscation, rate limits, injection filtering, calendar stop rule |
+The product is built around one idea: **a fixed learning map with adaptive execution**.
+The long-term path (goal → steps → weekly cycles → daily lessons) is designed once and
+versioned. Each cycle adapts only inside that map, driven by recorded evidence of what the
+learner actually did — never by the model re-inventing the route.
 
 ---
 
 ## Repository layout
 
 ```
-apps/tma/                    Telegram Mini App (React 18 + Vite + Tailwind)
-  src/app/                   App shell, route/tab gating, result handoff
-  src/features/              One folder per feature area
-    onboarding/              4-step first-run flow
-    learn/                   Roadmap, lesson card, lesson player, result
-    profile/                 Progress dashboard (charts, qualitative skills)
-    store/                   Subscription plans + Telegram Stars checkout
-    settings/                Language, goal, notifications, account deletion
-    admin/                   In-gift panel (admin only)
-  src/components/            Shared UI primitives + layout chrome
-  src/hooks/useApi.ts        All React Query hooks (with dev mocks)
-  src/lib/telegram.ts        Typed Telegram WebApp SDK wrapper
-  src/lib/api.ts             Encrypted-resilient API client + JWT storage
-  src/locales/               fa / en (+ ar, tr, ru stubs), RTL handling
-  src/mocks/                 Dev fixtures; stripped from production builds
-  src/store/                 Zustand stores (session, ui)
-
-workers/edge/                Cloudflare Worker (the entire backend)
-  src/index.ts               Request pipeline + dispatch
-  src/lib/telegram-auth.ts   Real initData HMAC-SHA256 validation
-  src/lib/jwt.ts             Dependency-free HS256 sign/verify
-  src/middleware/            Auth, rate limiting, prompt-injection filtering
-  src/routes/                auth, learn, store, admin, telegram-bot, admin-bot
-  src/services/              ai-engine, repository, supabase, qstash
-
-packages/shared/             Code shared by both sides
-  src/types/                 Domain types
-  src/schemas/               Zod contracts for all AI output and API input
-  src/constants/             Cycle schedule, Leitner intervals, plan pricing, i18n
-  src/engine/                The adaptive engine (pure, fully unit tested)
-  src/__tests__/             66 tests
-
-supabase/migrations/         0001_init · 0002_rls · 0003_seed
-docs/                        API_CONTRACTS.md · DEPLOYMENT.md
-ARCHITECTURE.md              Design decisions and honest security analysis
+mobile/               React Native app (Expo SDK 58) — the learner experience
+apps/admin/           Web admin console (Vite + React) — deployed to Cloudflare Pages
+apps/web/             Legacy web app kept as a browser fallback / reference UI
+workers/edge/         API on Cloudflare Workers (router + services + AI orchestration)
+workers/web/          Static host Worker for apps/web
+packages/shared/      Types, zod schemas, constants, and translations shared by all clients
+supabase/migrations/  Postgres schema (Supabase)
+scripts/              Deploy, backup, and smoke-test helpers
+docs/                 API contracts, retention policy, backup & recovery
 ```
+
+> `mobile/` is intentionally **not** an npm workspace. Expo's Metro bundler and the web
+> apps resolve React differently, and sharing one `node_modules` causes duplicated-React
+> crashes that are painful to debug. Metro is configured to read the shared translations
+> from `packages/shared` instead.
 
 ---
 
-## How the adaptive loop works
+## Domains
 
-```
-  Day 1–5          Day 6                Day 7
-  Teaching    →    Hidden assessment →  Consolidation
-     │                    │                   │
-     └──────── telemetry_events ──────────────┘
-                          │
-                    buildSkillDelta()          ← pure function in packages/shared
-                          │
-              shouldGenerateNextCycle()        ← honours the 12-day stall rule
-                          │
-                  AI generates cycle N+1       ← enqueued via QStash, never blocking
-                          │
-              generatedCycleSchema.parse()     ← strict Zod gate + repair retry
-                          │
-                 persistGeneratedCycle()       ← lessons land in Postgres
-```
+| Host | Serves | Hosting |
+|---|---|---|
+| `infolange.ir` | reserved, kept clean (no records) | — |
+| `api.infolange.ir` | API gateway | Cloudflare Worker `llwa-edge` |
+| `app.infolange.ir` | legacy web app | Cloudflare Worker `llwa-web` |
+| `admin.infolange.ir` | admin console | Cloudflare Pages `llwa-admin` |
 
-**Leitner spaced repetition** runs *inside* the daily lesson rather than as a
-separate section, so the learner never sees a flashcard screen. Each term carries
-a box (1–5), an ease factor (1.3–3.2), and an interval; Day 7 deliberately
-schedules the terms with the most lapses.
-
-The hidden assessment on Day 6 is structurally an ordinary lesson — same player,
-same flow — but its score is recorded as `hiddenAssessmentScore` and feeds the
-delta. The learner is never told they were assessed.
-
-### The calendar stop rule
-
-If a cycle is still open on day 13, `shouldGenerateNextCycle()` returns
-`CALENDAR_PAUSED_STALL` and no AI call is made. This caps token burn for users
-who abandon mid-cycle.
-
----
-
-## Security posture
-
-The original brief asked for "E2E encryption" between the Mini App and the edge.
-**ARCHITECTURE.md documents honestly why that is not achievable in a Mini App**
-— any key the client can unwrap ships inside the JS bundle and is readable by
-anyone who opens DevTools. Rather than ship security theater, the following was
-implemented and accepted:
-
-| Layer | Implementation |
-| --- | --- |
-| Transport | TLS 1.3, enforced by Cloudflare |
-| Identity | `initData` HMAC-SHA256 validation, reconstructed `data_check_string`, timing-safe comparison, 24 h freshness window |
-| Session | Short-lived HS256 JWT (15 min) signed in the Worker, held in memory + `sessionStorage` |
-| Routing | Single obfuscated gate path (`/llwa74/9xkr2mqv/v1/gate`), `?action=` dispatch, unknown paths return a bare 404 |
-| Abuse | Dual-window rate limiting (per-minute per-IP, per-day per-user) backed by KV |
-| Prompt safety | 13 injection patterns, zero-width character detection, recursive payload scanning, untrusted text wrapped before reaching the model |
-| Data | Row Level Security on every table; the client can only read its own rows |
-| Payments | Telegram Stars with `telegram_payment_charge_id` idempotency and underpayment rejection |
-
-An optional AES-GCM payload encryption layer is **written and wired but disabled
-by default** (`ENABLE_PAYLOAD_ENCRYPTION=false`). It is available if a deployment
-ever needs defence-in-depth, with the caveat above understood.
+Custom domains are declared in each `wrangler.toml` with `custom_domain = true`, so the
+Worker creates its own DNS record on deploy. The apex domain stays untouched on purpose.
 
 ---
 
 ## Getting started
 
-Requirements: **Node ≥ 20**, a Supabase project, a Telegram bot token, and a
-Cloudflare account. Full walkthrough — including bot creation, KV setup, secret
-entry, QStash wiring, and webhook registration — is in **`docs/DEPLOYMENT.md`**.
+Requirements: Node ≥ 20, npm ≥ 10, and (for Android builds) JDK 17 + Android SDK.
 
 ```bash
-npm install
-cp .env.example .env            # fill in the values
+npm install                      # installs workspaces (not mobile/)
+npm --prefix mobile install      # installs the Expo app separately
 
-# database
-supabase link --project-ref <ref>
-npm run db:push
-
-# local development
-npm run dev:tma                 # Mini App at http://localhost:5173
-npm run dev:edge                # Worker via wrangler dev
-
-# verification
-npm run typecheck               # all three workspaces
-npm test                        # 66 adaptive-engine + schema tests
-npm run build                   # shared → edge → tma
+npm run typecheck                # all workspaces + mobile
+npm test                         # backend unit tests
 ```
 
-### Previews outside Telegram
+### Mobile app
 
-Set `VITE_ENABLE_MOCK=true` (or just run the dev server) and the app boots with
-fixtures for a mid-cycle learner, a full lesson, the plan catalogue, and the admin
-roster. **Production builds strip every fixture** — `vite.config.ts` rewrites the
-mock module to an empty stub, so no sample data can leak into the shipped bundle.
-This is verified during the build.
+```bash
+cd mobile
+cp .env.example .env             # EXPO_PUBLIC_DEMO_MODE=true by default
+npm run android                  # local native build (needs Android SDK)
+npm run start                    # Metro dev server
+```
 
----
+For iOS you need macOS or an EAS cloud build (`eas build -p ios`). The project is fully
+configured for both; nothing is Windows-specific.
 
-## The three tabs
+### Admin console
 
-**Learn** — the 7-day roadmap (a snake layout that flows with RTL), today's lesson
-card, and the day's nudge. Lessons unlock sequentially; a completed cycle shows a
-locked state until the next one is generated.
+```bash
+npm run dev:admin                # http://localhost:5180
+```
 
-**Profile** — identity card, subscription status with days remaining, and three
-sub-panels: a progress dashboard (stats, qualitative "you can now…" skills, a
-weekly activity chart, per-skill breakdown, accuracy radial), the **Store** (all
-five plans with IRR and Stars pricing), and the **Admin panel** for operators.
+### API
 
-**Settings** — UI language (five options, RTL-aware), target language, learning
-goal, notification preferences, and a danger zone with one-click account deletion
-that wipes all server-side data.
-
-### Onboarding
-
-Four steps — UI language, target language, level, goal. The UI language **defaults
-to whatever Telegram reports** and the first step says so explicitly; choosing
-manually flips `language_source` from `TELEGRAM` to `MANUAL` permanently, so the
-app never overrides a deliberate choice on a later login.
+```bash
+npm run dev:edge                 # wrangler dev on 127.0.0.1:8787
+```
 
 ---
 
-## Monetisation (v1)
+## Authentication
 
-A **7-day free trial** is granted automatically. When `evaluateAccess()` reports
-`TRIAL_EXPIRED`, the Learn tab locks with an encouraging message and points to the
-Store.
+Three entry points, one session model (a short-lived HS256 JWT issued by the Worker):
 
-**Telegram Stars is the only live gateway in v1.** ZarinPal and the manual
-receipt flow are present in the UI as disabled "coming soon" entries — the data
-model (`payment_receipts`, `star_transactions`) already supports them.
+1. **Google Sign-In** (production). The app sends a Google `idToken`; the Worker verifies it
+   against Google's JWKS (RS256, issuer, audience, expiry, `email_verified`) and only then
+   creates the session. The client never sends profile data we trust.
+2. **Demo sign-in** (MVP only). Enabled with `DEMO_MODE=true`. Creates a per-device test
+   user so the whole flow can be exercised without any Google Cloud setup. Never an admin.
+3. **Admin password** (MVP). `auth-admin` accepts `ADMIN_PANEL_PASSWORD` with a
+   constant-time comparison and issues a `SUPER_ADMIN` session. To be replaced by SSO.
 
-Comp subscriptions — the feature explicitly requested for v1 — are available from
-**two** places, both audited into `admin_grants`:
-
-- **In-app admin panel** — search a user, pick a plan, choose whether to extend or
-  replace the current subscription, optionally attach bonus days and a note.
-- **Telegram admin bot** (separate token) — `/gift <telegram_id> <plan> [bonus_days]`,
-  plus `/user`, `/revoke`, `/stats`, `/plans`, `/help`. `normalizePlan()` accepts
-  `2W / 1M / 3M / 6M / 1Y`.
-
-Either path notifies the recipient in Telegram.
+Identity is keyed on the internal `users.id` (UUID). `telegram_id` still exists for the
+bot path but is nullable — mobile users do not have one. This is why admin operations take
+`userId`, not `telegramId`.
 
 ---
 
-## Deliberate departures from the original brief
+## AI pipeline
 
-| Brief | What shipped | Why |
-| --- | --- | --- |
-| n8n for orchestration | Removed | QStash + Worker `scheduled` handlers do the same job with no always-on process |
-| E2E encryption | HMAC + TLS + short JWT, payload encryption optional and off | Explained in `ARCHITECTURE.md`; the original was not achievable |
-| ZarinPal + receipt OCR in v1 | Deferred; schema and UI placeholders exist | Scoped to Stars per the locked decision |
-| `skill_level` discovered by the AI | Set at onboarding, then refined by the delta | Gives the first cycle a sane starting point instead of a cold guess |
+Content is produced in five separate model calls, each with its own prompt, schema, budget,
+and version. Splitting them keeps latency and token cost low and lets each stage be tuned
+independently.
+
+| # | Task key | Input | Output | When |
+|---|---|---|---|---|
+| 1 | `placement-test` | source/target language, self-reported level, goal | graded questions across the four skills | first sign-in |
+| 2 | `goal-to-steps` | target language, goal, placement result | steps + measurable milestone per step | once, and on goal change |
+| 3 | `step-to-cycles` | previous milestone, current milestone, past performance | weekly cycles + milestone per cycle | when a step ends |
+| 4 | `cycle-to-lessons` | previous/current cycle milestone, past performance | seven day-level syllabi | when a cycle ends |
+| 5 | `lesson-content` | the day's syllabus | the full lesson, sized to the learner's daily minutes | before the learner opens it |
+
+Prompts for all five live in the database (`ai_prompts`) and are editable and versioned from
+the admin console. Saving always creates a **new version**; exactly one version per task can
+be active (enforced by a partial unique index). If no active row exists, the built-in prompt
+in `ai-engine.ts` is used.
+
+Reuse is deliberate: before generating content the engine looks for an existing word card,
+pattern, or lesson for the same language/level/goal and reuses it. Repeating an existing
+word does not cost a model call.
 
 ---
 
-## Documentation
+## Learning model
 
-- **`ARCHITECTURE.md`** — decision log, data flow, the security analysis above
-- **`docs/API_CONTRACTS.md`** — every endpoint, payload, error code, and the
-  bot command reference
-- **`docs/DEPLOYMENT.md`** — step-by-step production setup and a launch checklist
+- **Fixed map, adaptive execution.** `learning-map.ts` builds a versioned map of stages with
+  prerequisites, objectives, and pass criteria. Every adaptation appends a decision record
+  (rule, evidence, timestamp, map version, before/after) so changes are explainable.
+- **Cycle shape.** Five learning days, one low-pressure transfer day, one rest day. Days 6
+  and 7 are deliberately not exam-shaped.
+- **Spaced repetition.** A five-box Leitner engine, independent of the weekly cycle. The
+  learner answers *before* seeing the answer — showing the answer first is not retrieval.
+- **Lesson length.** Item and question counts scale with `dailyMinutes`
+  (`≤10 → 0.8`, `≤20 → 1.2`, `≤30 → 1.6`, else `2`), so a 15-minute learner does not get a
+  30-minute lesson.
+- **Deterministic drills.** Free writing is checked with a word-tile sentence builder whose
+  answer is known in advance. No model call, no flaky evaluation.
+
+---
+
+## Configuration
+
+Backend secrets (set with `wrangler secret put`, never committed):
+
+| Name | Purpose |
+|---|---|
+| `JWT_SECRET` | signs session tokens |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY` | database access |
+| `GEMINI_API_KEY` / `DEEPSEEK_API_KEY` / `ANTHROPIC_API_KEY` | fallback AI providers |
+| `PROVIDER_ENCRYPTION_KEY` | encrypts admin-entered provider keys (AES-GCM) |
+| `GOOGLE_CLIENT_IDS` | comma-separated accepted Google audiences (web, Android, iOS) |
+| `ADMIN_EMAILS` | emails promoted to `SUPER_ADMIN` on first sign-in |
+| `ADMIN_PANEL_PASSWORD` | MVP password for the admin console |
+| `DEMO_MODE` | `true` enables password-free demo sign-in — **off in production** |
+| `TELEGRAM_BOT_TOKEN` | optional, only for the bot path |
+
+Public variables live in `wrangler.toml` (`[vars]`) and `mobile/.env` (`EXPO_PUBLIC_*`).
+
+---
+
+## Database
+
+Postgres via Supabase. Migrations are applied in order from `supabase/migrations/`:
+
+```
+0001_init → 0002_rls → 0003_seed → 0004_ai_providers → 0005_support_admin_content
+0006_admin_messages → 0007_plan_crud → 0008_admin_message_sender → 0009_admin_title
+0010_lesson_objective → 0011_ai_provider_kind → 0012_media_files → 0013_term_cards
+0014_perf_indexes → 0015_google_auth → 0016_admin_console
+```
+
+`0015` makes `telegram_id` nullable and adds `google_sub`, `email`, `auth_provider`, and push
+columns. `0016` adds `ai_prompts`, `feature_flags`, and `audit_log`.
+
+Apply with the Supabase SQL editor (paste in order) or `supabase db push`.
+
+---
+
+## Deployment
+
+```bash
+npm run deploy:edge     # typecheck → test → dry-run → wrangler deploy
+npm run deploy:web      # build apps/web → static Worker
+npm run deploy:admin    # build apps/admin → Cloudflare Pages
+npm run deploy:all      # all three, in order
+```
 
 ---
 
 ## Testing
 
 ```bash
-npm test          # from the repo root, or:
-npm run test -w @llwa/shared
+npm test                                  # 85 backend tests (vitest)
+cd mobile && npx tsc --noEmit             # mobile typecheck
+bash scripts/e2e-smoke.sh                 # end-to-end smoke against a live API
 ```
 
-66 tests cover the parts where a bug would be silent and expensive:
-
-- **Leitner transitions** — promotion, the two-box skip above box 1, reset on a
-  wrong answer, ease clamped to 1.3–3.2, mastery at box 5
-- **Delta construction** — accuracy, pause detection, weak versus mastered terms,
-  skill-area ranking
-- **Cycle triggering** — all five `shouldGenerateNextCycle` reasons, including the
-  calendar stall rule
-- **Access control** — the four `evaluateAccess` verdicts and day arithmetic
-- **Schema contracts** — day-6 and day-7 kind enforcement, duplicate-day rejection,
-  out-of-range answer indices, default filling
-
-The suite writes its scratch files under `packages/shared/node_modules/` because the
-host environment denies access to the OS temp directory; `scripts/run-tests.mjs`
-handles that redirection transparently.
+Notable guards: `ai-engine-schema.test.ts` locks the model's output schema to exactly what
+the UI renders (a previous schema leaked ~7,700 tokens per cycle);
+`google-auth.test.ts` rejects `alg: none`, HS256, unknown `kid`, and wrong audiences.
 
 ---
 
-## Status
+## Conventions
 
-| Area | State |
-| --- | --- |
-| Shared engine, types, schemas, constants | Complete, 66 tests passing |
-| Cloudflare Worker (all routes, bots, AI orchestration) | Complete, bundles clean at 63 KiB gzipped |
-| Database migrations + RLS + seed | Complete |
-| Telegram Mini App (all tabs, all features) | Complete, builds clean |
-| i18n | `fa` and `en` complete; `ar`, `tr`, `ru` fall back to English |
-| Docs | Complete |
+- **Commits are written in English.**
+- No `any` in the AI boundary — every model output is validated by zod before it is stored.
+- Cache hits and cache misses must return the **same response shape**.
+- Any URL returned to a client must be absolute (API and clients live on different origins).
+- The daily lesson must open without a live model call; content is generated ahead of time.

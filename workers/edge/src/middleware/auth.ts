@@ -65,6 +65,11 @@ function routeClassForAction(action: string): RouteClass {
     case 'admin-messages-list':
     case 'admin-list-admins':
     case 'admin-set-role':
+    case 'admin-prompts':
+    case 'admin-prompt-save':
+    case 'admin-prompt-activate':
+    case 'admin-flags':
+    case 'admin-flag-set':
     case 'admin-ai-providers':
     case 'admin-ai-provider-create':
     case 'admin-ai-provider-update':

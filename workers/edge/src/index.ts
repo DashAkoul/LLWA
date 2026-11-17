@@ -11,6 +11,13 @@ import { enforceRateLimit } from './middleware/rate-limit';
 import { scanPayloadForInjection } from './middleware/content-filter';
 
 import {
+  handleAdminPrompts,
+  handleAdminPromptSave,
+  handleAdminPromptActivate,
+  handleAdminFlags,
+  handleAdminFlagSet,
+} from './routes/admin-console';
+import {
   handleAuth,
   handleAuthGoogle,
   handleAuthDemo,
@@ -532,6 +539,16 @@ async function dispatch(
       return handleMessagesRead(request, context);
 
     // admin — AI provider pool
+    case 'admin-prompts':
+      return handleAdminPrompts(request, context);
+    case 'admin-prompt-save':
+      return handleAdminPromptSave(request, context);
+    case 'admin-prompt-activate':
+      return handleAdminPromptActivate(request, context);
+    case 'admin-flags':
+      return handleAdminFlags(request, context);
+    case 'admin-flag-set':
+      return handleAdminFlagSet(request, context);
     case 'admin-ai-providers':
       return handleAdminListProviders(request, context);
     case 'admin-ai-provider-create':
