@@ -11,6 +11,9 @@ import {
   generatedLessonSchema,
   lessonSkeletonSchema,
   cycleOutlineSchema,
+  aiMapPlanSchema,
+  aiStepCyclesSchema,
+  aiCycleSyllabusSchema,
   validateWithDetail,
   CYCLE_SCHEDULE,
   DAY_PROFILES,
@@ -22,6 +25,9 @@ import {
   type LessonSkeleton,
   type CycleOutline,
   type OutlineDay,
+  type AiMapPlan,
+  type AiCyclePlan,
+  type AiDayPlan,
 } from '@llwa/shared';
 import type { Env } from '../types';
 import { resolveProviderKey, FROM_ENV_MARKER } from '../lib/provider-vault';
@@ -534,6 +540,287 @@ export class AiEngine {
     );
 
     return { story: r.value, attempts: r.attempts };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  خط تولید نقشه — سه فراخوانی مستقل
+  //
+  //  چرا سه فراخوانی و نه یکی؟
+  //  ──────────────────────────
+  //  ۱. هر مرحله ورودی متفاوتی دارد (نتیجهٔ تعیین سطح / نقطه‌عطف گام /
+  //     نقطه‌عطف چرخه) و در زمان متفاوتی اجرا می‌شود.
+  //  ۲. مدل با یک درخواست «همه‌چیز» کیفیت پایین‌تری می‌دهد و توکن بیشتری
+  //     هدر می‌رود، چون هر بخش اسکیمای خودش را دارد.
+  //  ۳. اگر یکی شکست بخورد، بقیه و مسیر فعلی سالم می‌مانند.
+  //
+  //  ⚠️ همهٔ این‌ها «پیشنهاد» هستند: اگر خروجی نامعتبر باشد `null`
+  //  برمی‌گردد و لایهٔ بالاتر به نقشهٔ قطعی برمی‌گردد.
+  // ═══════════════════════════════════════════════════════════════════
+
+  /**
+   * فراخوانی #۲ — هدف + نتیجهٔ تعیین سطح → گام‌های مسیر.
+   */
+  async planMap(input: {
+    targetLanguage: string;
+    uiLanguage: string;
+    goal: string;
+    selfReportedLevel: string;
+    placementLevel?: string | null;
+    placementScorePct?: number | null;
+    dailyMinutes: number;
+  }): Promise<{
+    plan: AiMapPlan | null;
+    attempts: AiAttempt[];
+    model: string;
+    totalMs: number;
+  }> {
+    const jsonSchema = {
+      type: 'object',
+      properties: {
+        outcomeUi: { type: 'string' },
+        estimatedWeeks: { type: 'integer' },
+        steps: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string' },
+              titleUi: { type: 'string' },
+              objective: { type: 'string' },
+              objectiveUi: { type: 'string' },
+              skills: { type: 'array', items: { type: 'string' } },
+              estimatedCycles: { type: 'integer' },
+              milestones: { type: 'array', items: { type: 'string' } },
+            },
+            required: [
+              'title',
+              'titleUi',
+              'objective',
+              'objectiveUi',
+              'skills',
+              'estimatedCycles',
+              'milestones',
+            ],
+          },
+        },
+      },
+      required: ['outcomeUi', 'estimatedWeeks', 'steps'],
+    };
+
+    const override = await activePrompt(this.env, 'goal-to-steps');
+
+    const system = mergePrompt(
+      override,
+      [
+        `You are an expert curriculum architect for language learning.`,
+        `You design a PATH of steps — you do NOT write lessons.`,
+        ``,
+        `Target language: ${input.targetLanguage}. Learner UI language: ${input.uiLanguage}.`,
+        `Learner goal: ${input.goal}`,
+        `Self-reported level: ${input.selfReportedLevel}`,
+        input.placementLevel
+          ? `Placement test: estimated ${input.placementLevel} (score ${Math.round(
+              input.placementScorePct ?? 0
+            )}%). Trust the test over the self-report.`
+          : `No placement test result — trust the self-report.`,
+        `Daily study time: ${input.dailyMinutes} minutes.`,
+        ``,
+        `RULES:`,
+        `- Produce 3 to 12 steps, ordered from the learner's current level to the goal.`,
+        `- Each step must be a small, achievable stage (e.g. "basic greetings and introductions"),`,
+        `  not a vague theme ("communication").`,
+        `- "objective" states what the learner CAN DO at the end, in observable terms.`,
+        `- "milestones" are 1-3 concrete, checkable criteria that prove the step is done.`,
+        `  They must be measurable by behaviour, not by "understands well".`,
+        `- "estimatedCycles" is how many 7-day cycles this step realistically needs`,
+        `  given ${input.dailyMinutes} min/day. Be honest, not optimistic.`,
+        `- "skills" are from: vocabulary, grammar, listening, speaking, reading, writing.`,
+        `- Steps must not overlap: each introduces distinct content.`,
+        `- Step 1 must be reachable from the current level within 1-2 cycles.`,
+        ``,
+        `Output ONE JSON object matching the schema. No markdown.`,
+      ].join('\n')
+    );
+
+    const r = await this.runChain(
+      aiMapPlanSchema,
+      system,
+      `Plan the step-by-step path to "${input.goal}" for a ${input.selfReportedLevel} learner of ${input.targetLanguage}.`,
+      'map-plan',
+      jsonSchema
+    );
+
+    return { plan: r.value ?? null, attempts: r.attempts, model: r.model, totalMs: r.totalMs };
+  }
+
+  /**
+   * فراخوانی #۳ — یک گام → چرخه‌های هفتگی.
+   */
+  async planStepCycles(input: {
+    targetLanguage: string;
+    uiLanguage: string;
+    goal: string;
+    previousMilestone: string;
+    currentMilestone: string;
+    performance?: string | null;
+    maxCycles: number;
+  }): Promise<{
+    cycles: AiCyclePlan[] | null;
+    attempts: AiAttempt[];
+    model: string;
+    totalMs: number;
+  }> {
+    const jsonSchema = {
+      type: 'object',
+      properties: {
+        cycles: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string' },
+              titleUi: { type: 'string' },
+              milestone: { type: 'string' },
+              focus: { type: 'string' },
+            },
+            required: ['title', 'titleUi', 'milestone', 'focus'],
+          },
+        },
+      },
+      required: ['cycles'],
+    };
+
+    const override = await activePrompt(this.env, 'step-to-cycles');
+
+    const system = mergePrompt(
+      override,
+      [
+        `You are an expert curriculum architect. You split ONE step into 7-day cycles.`,
+        `You do NOT write lesson content.`,
+        ``,
+        `Target language: ${input.targetLanguage}. Learner UI language: ${input.uiLanguage}.`,
+        `Overall goal: ${input.goal}`,
+        `Starting point (end of the previous step): ${input.previousMilestone}`,
+        `End of this step (the target): ${input.currentMilestone}`,
+        input.performance
+          ? `Learner performance so far: ${input.performance}`
+          : `No performance data yet — assume a steady, average pace.`,
+        ``,
+        `RULES:`,
+        `- Produce at most ${input.maxCycles} cycles. Fewer is fine if the step is small.`,
+        `- Each cycle must end with a milestone that is a visible behaviour,`,
+        `  strictly between the previous milestone and the step target.`,
+        `- Cycles must build on each other: cycle N+1 assumes cycle N is done.`,
+        `- Do not repeat the same sub-skill in two cycles.`,
+        `- "focus" is one sentence naming the content domain (e.g. "greetings with strangers,`,
+        `  formal vs informal register").`,
+        ``,
+        `Output ONE JSON object matching the schema. No markdown.`,
+      ].join('\n')
+    );
+
+    const r = await this.runChain(
+      aiStepCyclesSchema,
+      system,
+      `Split the step ending at "${input.currentMilestone}" into weekly cycles.`,
+      'step-cycles',
+      jsonSchema
+    );
+
+    return { cycles: r.value?.cycles ?? null, attempts: r.attempts, model: r.model, totalMs: r.totalMs };
+  }
+
+  /**
+   * فراخوانی #۴ — یک چرخه → سرفصل هفت روز.
+   *
+   * ⚠️ روز ۶ «سنجش پنهان» و روز ۷ «تثبیت سبک» است؛ نباید شبیه امتحان شود.
+   * این در اسکیما (kind) و در قواعد پرامپت قفل شده است.
+   */
+  async planCycleSyllabus(input: {
+    targetLanguage: string;
+    uiLanguage: string;
+    previousMilestone: string;
+    cycleMilestone: string;
+    performance?: string | null;
+    dailyMinutes: number;
+    /** واژه‌های موجود در فرهنگ برای پیشنهاد — صفر توکن برای جزئیات */
+    knownTerms?: string[];
+  }): Promise<{
+    days: AiDayPlan[] | null;
+    attempts: AiAttempt[];
+    model: string;
+    totalMs: number;
+  }> {
+    const jsonSchema = {
+      type: 'object',
+      properties: {
+        days: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              dayNumber: { type: 'integer' },
+              title: { type: 'string' },
+              kind: {
+                type: 'string',
+                enum: ['TEACHING', 'HIDDEN_ASSESSMENT', 'CONSOLIDATION'],
+              },
+              objective: { type: 'string' },
+              milestone: { type: 'string' },
+              focusTerms: { type: 'array', items: { type: 'string' } },
+            },
+            required: ['dayNumber', 'title', 'kind', 'objective', 'milestone'],
+          },
+        },
+      },
+      required: ['days'],
+    };
+
+    const override = await activePrompt(this.env, 'cycle-to-lessons');
+    const known = (input.knownTerms ?? []).slice(0, 60);
+
+    const system = mergePrompt(
+      override,
+      [
+        `You are an expert curriculum architect. You turn ONE 7-day cycle into a daily syllabus.`,
+        `You do NOT write lesson content — only the outline of each day.`,
+        ``,
+        `Target language: ${input.targetLanguage}. Learner UI language: ${input.uiLanguage}.`,
+        `Cycle start (end of previous cycle): ${input.previousMilestone}`,
+        `Cycle target: ${input.cycleMilestone}`,
+        input.performance ? `Learner performance so far: ${input.performance}` : '',
+        `Daily study time: ${input.dailyMinutes} minutes.`,
+        known.length
+          ? `Terms already available in our lexicon (prefer these; do not invent synonyms):\n  ${known.join(', ')}`
+          : '',
+        ``,
+        `RULES:`,
+        `- Exactly 7 days. Days 1-5 kind=TEACHING, day 6 kind=HIDDEN_ASSESSMENT, day 7 kind=CONSOLIDATION.`,
+        `- Days 1-5 each teach a DIFFERENT sub-skill; no two days repeat the same focus.`,
+        `- Day 6 must look like a normal, low-pressure day to the learner (a story, a dialogue,`,
+        `  a practical task) — never an exam. It measures transfer indirectly.`,
+        `- Day 7 is light: consolidation of weak items only, with fresh examples. No heavy task.`,
+        `- Each day's "objective" says what the learner can DO after that day.`,
+        `- "milestone" is a checkable criterion for that day.`,
+        `- "focusTerms" is optional: 4-12 target-language terms for that day, preferring the`,
+        `  provided lexicon terms.`,
+        `- Respect the time budget: ${input.dailyMinutes} min/day means a small number of new items.`,
+        ``,
+        `Output ONE JSON object matching the schema. No markdown.`,
+      ]
+        .filter(Boolean)
+        .join('\n')
+    );
+
+    const r = await this.runChain(
+      aiCycleSyllabusSchema,
+      system,
+      `Write the 7-day syllabus for the cycle ending at "${input.cycleMilestone}".`,
+      'cycle-syllabus',
+      jsonSchema
+    );
+
+    return { days: r.value?.days ?? null, attempts: r.attempts, model: r.model, totalMs: r.totalMs };
   }
 
   async generateLesson(

@@ -47,6 +47,7 @@ import {
   MIN_EVIDENCE_ANSWERS,
   validateLessonAgainstMap,
 } from '../services/learning-map';
+import { applyStagesToMap, planStages } from '../services/ai-planner';
 import {
   coinDiscountFor,
   DEFAULT_COIN_DISCOUNT,
@@ -347,7 +348,7 @@ export async function handleHome(
     current && currentReady ? await r.getLessonParts(user.id, current.id) : 0;
 
   // ── نقشهٔ ثابت ────────────────────────────────────────────────────
-  const map = await ensureLearningMap(r, user);
+  const map = await ensureLearningMap(r, user, env);
   const stage = currentStage(map);
 
   return jsonSuccess(
@@ -747,7 +748,7 @@ export async function handleCompleteLesson(
    * ⚠️ جمع‌زدن «تشخیص» و «تولید» در یک عدد، تصویر غلط می‌دهد (۱۱.۶).
    */
   try {
-    const skillMap = await ensureLearningMap(r, user);
+    const skillMap = await ensureLearningMap(r, user, env);
     const skillMastery = { ...(skillMap.skillMastery ?? {}) };
     for (const a of answers) {
       const skill = skillFor(a.itemId);
@@ -773,7 +774,7 @@ export async function handleCompleteLesson(
    */
   if (allDone) {
     try {
-      let map = await ensureLearningMap(r, user);
+      let map = await ensureLearningMap(r, user, env);
       const cycleTelemetry = await r.getTelemetryForCycle(lesson.cycle_id);
       const cycleAnswers = cycleTelemetry.filter((t) => t.event_type === 'ANSWER');
       const accuracyPct = cycleAnswers.length
@@ -1053,7 +1054,7 @@ export async function handleAdminMap(
     target = other;
   }
 
-  const map = await ensureLearningMap(r, target);
+  const map = await ensureLearningMap(r, target, env);
   return jsonSuccess(
     {
       userId: target.id,
@@ -1351,7 +1352,7 @@ export async function handleDelayedSubmit(
           .catch(() => undefined);
       }
 
-      let map = await ensureLearningMap(r, user);
+      let map = await ensureLearningMap(r, user, env);
       const stage = currentStage(map);
       map = appendDecision(map, {
         scope: 'REVIEW',
@@ -1493,7 +1494,7 @@ export async function handleCalibrationTest(
   }
   const { user, repo: r } = resolved;
 
-  const map = await ensureLearningMap(r, user);
+  const map = await ensureLearningMap(r, user, env);
   if (map.calibration) {
     return jsonSuccess({ alreadyCalibrated: true, calibration: map.calibration }, requestId, env);
   }
@@ -1596,7 +1597,7 @@ export async function handleCalibrationSubmit(
   const estRank = LEVEL_RANK[estimated] ?? 1;
   const mismatch = Math.abs(estRank - selfRank) >= 2;
 
-  let map = await ensureLearningMap(r, user);
+  let map = await ensureLearningMap(r, user, env);
 
   map = {
     ...map,
@@ -2772,17 +2773,63 @@ async function ensureLearningMap(
     learning_goal: string | null;
     target_language: string | null;
     ui_language: string | null;
-  }
+    skill_level?: string | null;
+    daily_minutes?: number | null;
+  },
+  env?: RequestContext['env']
 ): Promise<LearningMap> {
   const existing = await r.getLearningMap(user.id);
   if (existing?.stages?.length) return existing;
 
-  const map = buildLearningMap({
+  let map = buildLearningMap({
     id: `map-${user.id.slice(0, 8)}`,
     goal: user.learning_goal,
     targetLanguage: user.target_language ?? 'en',
     uiLanguage: user.ui_language ?? 'fa',
   });
+
+  /**
+   * فراخوانی #۲ — «هدف → گام‌ها».
+   *
+   * نقشهٔ قطعی بالا همیشه ساخته می‌شود (fallback). بعد تلاش می‌کنیم گام‌ها
+   * را با مدل دقیق‌تر کنیم؛ اگر مدل در دسترس نباشد یا خروجی نامعتبر بدهد،
+   * همان نقشهٔ قطعی می‌ماند و کاربر هیچ خطایی نمی‌بیند.
+   *
+   * ⚠️ فقط یک بار در عمر کاربر اجرا می‌شود (وقتی نقشه وجود ندارد)، پس
+   * هزینهٔ آن یک‌بار است — نه در هر ورود.
+   */
+  if (env) {
+    try {
+      const engine = await textEngine(env, r);
+      if (engine) {
+        const prefs = await r.getUserPrefs(user.id).catch(() => null);
+        const plan = await planStages(engine, {
+          targetLanguage: user.target_language ?? 'en',
+          uiLanguage: user.ui_language ?? 'fa',
+          goal: user.learning_goal ?? 'general fluency',
+          selfReportedLevel: user.skill_level ?? 'A1',
+          placementLevel: map.calibration?.estimated ?? null,
+          placementScorePct: map.calibration?.scorePct ?? null,
+          dailyMinutes: prefs?.dailyMinutes ?? user.daily_minutes ?? 15,
+        });
+
+        if (plan.stages && plan.stages.length >= 2) {
+          map = applyStagesToMap(map, plan.stages, 'ai:goal-to-steps');
+          if (plan.outcomeUi) map.outcome = plan.outcomeUi;
+          if (plan.estimatedWeeks) {
+            map.estimatedWeeks = plan.estimatedWeeks;
+            map.estimatedLabel = plan.estimatedLabel;
+          }
+        }
+      }
+    } catch (err) {
+      // مدل نباید مانع شروع کاربر شود
+      console.warn(
+        `[map] ai planning skipped: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
   await r.saveLearningMap(user.id, map);
   return map;
 }

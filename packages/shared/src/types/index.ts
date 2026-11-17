@@ -789,6 +789,10 @@ export interface LearningMap {
   updatedAt: string;
   stages: MapStage[];
   currentStageId: string;
+  /** تخمین کل مسیر به هفته — از فراخوانی «هدف → گام‌ها» */
+  estimatedWeeks?: number;
+  /** همان تخمین به شکل خوانا برای نمایش («۳ ماه · روزی ۳۰ دقیقه») */
+  estimatedLabel?: string | null;
   /** سابقهٔ رسمی تغییرات نقشه (نه تغییر خودکار) */
   history: {
     at: string;

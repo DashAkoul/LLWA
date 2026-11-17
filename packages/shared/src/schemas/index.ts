@@ -847,3 +847,70 @@ export function validateWithDetail<T>(
     ),
   };
 }
+
+// ═════════════════════════════════════════════════════════════════════
+//  خط تولید نقشهٔ یادگیری — سه فراخوانی AI
+//
+//  چرا اسکیمای سخت‌گیرانه: خروجی این سه مرحله **ساختار مسیر** را می‌سازد،
+//  نه یک متن. اگر مدل تعداد قدم‌ها را بی‌نهایت بدهد یا روز ۸ بسازد، کل
+//  چرخهٔ محصول می‌شکند. پس محدوده‌ها در اسکیما قفل شده‌اند.
+// ═════════════════════════════════════════════════════════════════════
+
+/** یک «گام» از هدف کلی — نقطه‌عطف قابل مشاهده دارد */
+export const aiStepSchema = z.object({
+  title: z.string().min(2).max(120),
+  titleUi: z.string().min(2).max(120),
+  /** چه کاری کاربر در پایان این گام می‌تواند انجام دهد (انگلیسی) */
+  objective: z.string().min(5).max(400),
+  /** همان، به زبان رابط کاربر */
+  objectiveUi: z.string().min(2).max(400),
+  skills: z.array(z.string().min(2).max(40)).min(1).max(6),
+  /** تخمین تعداد چرخهٔ هفتگی برای این گام */
+  estimatedCycles: z.number().int().min(1).max(8),
+  /** معیارهای قابل مشاهدهٔ پایان گام */
+  milestones: z.array(z.string().min(3).max(200)).min(1).max(6),
+});
+
+export const aiMapPlanSchema = z.object({
+  /** نتیجهٔ عملی نهایی به زبان کاربر */
+  outcomeUi: z.string().min(3).max(300),
+  /** تخمین کل مسیر به هفته — برای نمایش «چقدر طول می‌کشد» */
+  estimatedWeeks: z.number().int().min(1).max(520),
+  steps: z.array(aiStepSchema).min(2).max(20),
+});
+
+/** یک چرخهٔ هفتگی درون یک گام */
+export const aiCyclePlanSchema = z.object({
+  title: z.string().min(2).max(120),
+  titleUi: z.string().min(2).max(120),
+  /** نقطه‌عطف پایان این چرخه (قابل مشاهده) */
+  milestone: z.string().min(3).max(300),
+  /** تمرکز محتوایی — یک جمله */
+  focus: z.string().min(3).max(300),
+});
+
+export const aiStepCyclesSchema = z.object({
+  cycles: z.array(aiCyclePlanSchema).min(1).max(8),
+});
+
+/** یک روز از سرفصل چرخه */
+export const aiDayPlanSchema = z.object({
+  dayNumber: z.number().int().min(1).max(7),
+  title: z.string().min(2).max(120),
+  kind: z.enum(['TEACHING', 'HIDDEN_ASSESSMENT', 'CONSOLIDATION']),
+  /** هدف آن روز — «چه کاری می‌تواند بکند» */
+  objective: z.string().min(5).max(300),
+  /** نقطه‌عطف روز */
+  milestone: z.string().min(3).max(300),
+  /** واژه‌های پیشنهادی از فرهنگ (اختیاری، حداکثر ۱۲) */
+  focusTerms: z.array(z.string().min(1).max(40)).max(12).optional(),
+});
+
+export const aiCycleSyllabusSchema = z.object({
+  days: z.array(aiDayPlanSchema).length(7),
+});
+
+export type AiStep = z.infer<typeof aiStepSchema>;
+export type AiMapPlan = z.infer<typeof aiMapPlanSchema>;
+export type AiCyclePlan = z.infer<typeof aiCyclePlanSchema>;
+export type AiDayPlan = z.infer<typeof aiDayPlanSchema>;

@@ -138,9 +138,13 @@ export const adminApi = {
   aiProviders: () => callApi<unknown>('admin-ai-providers'),
   aiProviderCreate: (body: unknown) => callApi<unknown>('admin-ai-provider-create', { method: 'POST', body }),
   aiProviderUpdate: (id: string, body: unknown) =>
-    callApi<unknown>('admin-ai-provider-update', { method: 'POST', body: { id, ...(body as object) } }),
+    // ⚠️ `id` باید query param باشد — سرور آن را از url.searchParams می‌خواند
+    callApi<unknown>('admin-ai-provider-update', { method: 'POST', body, query: { id } }),
   aiProviderDelete: (id: string) => callApi<unknown>('admin-ai-provider-delete', { method: 'POST', body: { id } }),
   aiProviderTest: (id: string) => callApi<unknown>('admin-ai-provider-test', { method: 'POST', body: { id } }),
+  /** ترتیب زنجیرهٔ failover — شناسه‌ها از اول تا آخر */
+  aiProviderReorder: (order: string[]) =>
+    callApi<unknown>('admin-ai-provider-reorder', { method: 'POST', body: { order } }),
 
   // ── پرامپت‌ها (نسخه‌دار) ──────────────────────────────────────────
   prompts: () => callApi<{ prompts: PromptRow[] }>('admin-prompts'),
