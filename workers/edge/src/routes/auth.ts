@@ -402,7 +402,9 @@ export async function handleHealth(
       version: '1.0.0',
       features: {
         googleSignIn: Boolean(env.GOOGLE_CLIENT_IDS),
-        telegramStars: true,
+        /** MVP: ورود بدون گوگل. در production باید false شود. */
+        demoMode: String(env.DEMO_MODE ?? 'false') === 'true',
+        adminPanel: Boolean(env.ADMIN_PANEL_PASSWORD),
         adminGift: true,
         payloadEncryption:
           String(env.ENABLE_PAYLOAD_ENCRYPTION ?? 'false') === 'true',

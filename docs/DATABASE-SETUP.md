@@ -60,6 +60,22 @@ part-001.sql … part-022.sql   # 3159 words, 5200 entries, 25110 senses
 99_seed_term_cards.sql        # copies senses into term_cards
 ```
 
+### Recommended: REST import (handles the volume)
+
+The generated SQL totals ~27 MB and a few single files exceed 2 MB, which the
+dashboard SQL editor struggles with. Import through the REST API instead:
+
+```bash
+SUPABASE_URL=https://<project>.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key> \
+node tools/import-lexicon.mjs --input "C:/path/to/longman3000.json"
+```
+
+The script upserts in batches, is safe to re-run, and calls
+`seed_term_cards_from_lexicon()` at the end.
+
+### Alternative: SQL files
+
 Run every `part-*.sql` (order does not matter — each file is self-contained and
 wraps itself in a transaction), then run `99_seed_term_cards.sql` **last**.
 
