@@ -1,0 +1,14 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@llwa/shared": ["../packages/shared/src/types/index.ts"],
+      "@llwa/shared/constants": ["../packages/shared/src/constants/index.ts"],
+      "@llwa/shared/locales": ["../packages/shared/src/locales/index.ts"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "exclude": ["node_modules", "android", "ios", "dist"]
+}

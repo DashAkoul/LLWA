@@ -439,6 +439,33 @@ export const authLinkRequestSchema = z.object({
   token: z.string().min(16).max(128),
 });
 
+/**
+ * ورود اپ موبایل با حساب گوگل.
+ *
+ * کلاینت فقط `idToken` را می‌فرستد؛ هر چیز دیگری (ایمیل، نام، تصویر) از
+ * داخل همان توکن و پس از اعتبارسنجی امضا خوانده می‌شود. این کار جلوی
+ * جعل هویت با فرستادن پروفایل ساختگی را می‌گیرد.
+ */
+export const googleAuthRequestSchema = z.object({
+  idToken: z.string().min(20).max(8192),
+});
+
+/**
+ * ورود آزمایشی MVP — بدون گوگل.
+ *
+ * `deviceId` اختیاری است: اگر کلاینت یک شناسهٔ پایدار بفرستد، همان کاربر
+ * آزمایشی با پیشرفتش برمی‌گردد. اگر نفرستد، همه یک کاربر مشترک می‌گیرند.
+ * ⚠️ فقط وقتی `DEMO_MODE=true` است کار می‌کند.
+ */
+export const demoAuthRequestSchema = z.object({
+  deviceId: z.string().min(8).max(64).optional(),
+});
+
+/** ورود پنل ادمین با رمز (MVP) */
+export const adminAuthRequestSchema = z.object({
+  password: z.string().min(4).max(200),
+});
+
 export const onboardingRequestSchema = z.object({
   uiLanguage: uiLanguageSchema,
   targetLanguage: targetLanguageSchema,

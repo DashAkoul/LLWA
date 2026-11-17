@@ -13,6 +13,30 @@ export interface Env {
   // Auth
   JWT_SECRET: string;
 
+  /**
+   * Google Sign-In — فهرست clientId های مجاز با کاما جدا می‌شود.
+   * (Web + Android + iOS؛ هر سه در یک متغیر تا یک idToken از هر پلتفرمی
+   * پذیرفته شود.)
+   * مثال: `xxx.apps.googleusercontent.com,yyy.apps.googleusercontent.com`
+   */
+  GOOGLE_CLIENT_IDS?: string;
+  /**
+   * ایمیل‌هایی که به‌محض اولین ورود، SUPER_ADMIN می‌شوند (با کاما جدا).
+   * جایگزین `TELEGRAM_ADMIN_IDS` برای اپ موبایل.
+   */
+  ADMIN_EMAILS?: string;
+
+  /**
+   * ⚠️ فقط برای MVP و تست. اگر `'true'` باشد، اکشن `auth-demo` فعال می‌شود
+   * و بدون Google یک کاربر آزمایشی می‌سازد. **در production باید خاموش باشد.**
+   */
+  DEMO_MODE?: string;
+  /**
+   * رمز ورود پنل ادمین (اپ وب جدا). اگر تنظیم نشده باشد، `auth-admin` کار
+   * نمی‌کند. برای MVP است؛ بعداً با Google Workspace جایگزین می‌شود.
+   */
+  ADMIN_PANEL_PASSWORD?: string;
+
   // Queue
   QSTASH_TOKEN?: string;
   QSTASH_CURRENT_SIGNING_KEY?: string;
@@ -87,7 +111,7 @@ export interface Env {
   // اختیاری: اگر پیکربندی نشود، صوت تولید نمی‌شود ولی بقیهٔ اپ کار می‌کند.
   /** endpoint مثل `https://s3.eu-central-003.backblazeb2.com` */
   MEDIA_S3_ENDPOINT?: string;
-  /** نام باکس، مثل `kpanah-media` */
+  /** نام باکس، مثل `llwa-media` */
   MEDIA_S3_BUCKET?: string;
   /** منطقه (اختیاری — از endpoint استخراج می‌شود) */
   MEDIA_S3_REGION?: string;
@@ -128,7 +152,16 @@ export interface Env {
 export interface AuthClaims {
   /** لازم است تا با JwtPayload سازگار باشد */
   [key: string]: unknown;
-  telegramId: number;
+  /**
+   * شناسهٔ تلگرام — فقط برای کاربرانی که از ربات آمده‌اند.
+   * در اپ موبایل (ورود با گوگل) این فیلد وجود ندارد.
+   */
+  telegramId?: number;
+  /** شناسهٔ گوگل (sub) — فقط برای ورود با گوگل */
+  googleSub?: string;
+  /** ایمیل — برای کاربران گوگل */
+  email?: string;
+  /** ⚠️ هویت اصلی و همیشه موجود — همهٔ مسیرها باید از این استفاده کنند */
   userId: string;
   uiLanguage: string;
   iat: number;
@@ -140,6 +173,8 @@ export interface RequestContext {
   requestId: string;
   claims?: AuthClaims;
   telegramId?: number;
+  googleSub?: string;
+  email?: string;
   userId?: string;
   /** نقش ادمین (در صورت احراز دسترسی ADMIN) — برای RBAC */
   adminRole?: 'SUPER_ADMIN' | 'SUPPORT' | 'MARKETING' | 'FINANCE';

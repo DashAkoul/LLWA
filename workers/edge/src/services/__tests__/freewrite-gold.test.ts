@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import gold from './fixtures/freewrite-gold.json';
-import { freeWriteResultSchema } from '@kpanah/shared';
+import { freeWriteResultSchema } from '@llwa/shared';
 
 /**
  * مجموعهٔ پاسخ مرجع (gold set) — اعتبار خودِ مجموعه را تضمین می‌کند.

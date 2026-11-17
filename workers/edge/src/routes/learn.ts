@@ -18,7 +18,7 @@ import {
   CYCLE_LENGTH_DAYS,
   ECONOMY,
   dayProfile,
-} from '@kpanah/shared';
+} from '@llwa/shared';
 import type {
   SkillDelta,
   WeakTerm,
@@ -32,7 +32,7 @@ import type {
   StoryPart,
   ApplicationQuestion,
   LearningMap,
-} from '@kpanah/shared';
+} from '@llwa/shared';
 import type { RequestContext } from '../types';
 import { jsonError, jsonSuccess, readJson } from '../lib/response';
 import { errorTypeFor, skillFor } from '../services/error-taxonomy';

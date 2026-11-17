@@ -10,7 +10,22 @@ import { resolveRoute, authenticate } from './middleware/auth';
 import { enforceRateLimit } from './middleware/rate-limit';
 import { scanPayloadForInjection } from './middleware/content-filter';
 
-import { handleAuth, handleAuthLink, handleMe, handleHealth } from './routes/auth';
+import {
+  handleAdminPrompts,
+  handleAdminPromptSave,
+  handleAdminPromptActivate,
+  handleAdminFlags,
+  handleAdminFlagSet,
+} from './routes/admin-console';
+import {
+  handleAuth,
+  handleAuthGoogle,
+  handleAuthDemo,
+  handleAuthAdmin,
+  handleAuthLink,
+  handleMe,
+  handleHealth,
+} from './routes/auth';
 import {
   handleHome,
   handleGetTodayLesson,
@@ -396,6 +411,12 @@ async function dispatch(
     // auth & profile
     case 'auth':
       return handleAuth(request, context);
+    case 'auth-google':
+      return handleAuthGoogle(request, context);
+    case 'auth-demo':
+      return handleAuthDemo(request, context);
+    case 'auth-admin':
+      return handleAuthAdmin(request, context);
     case 'auth-link':
       return handleAuthLink(request, context);
     case 'me':
@@ -518,6 +539,16 @@ async function dispatch(
       return handleMessagesRead(request, context);
 
     // admin — AI provider pool
+    case 'admin-prompts':
+      return handleAdminPrompts(request, context);
+    case 'admin-prompt-save':
+      return handleAdminPromptSave(request, context);
+    case 'admin-prompt-activate':
+      return handleAdminPromptActivate(request, context);
+    case 'admin-flags':
+      return handleAdminFlags(request, context);
+    case 'admin-flag-set':
+      return handleAdminFlagSet(request, context);
     case 'admin-ai-providers':
       return handleAdminListProviders(request, context);
     case 'admin-ai-provider-create':

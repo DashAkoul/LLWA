@@ -1,4 +1,4 @@
-import type { ApiError, ApiErrorCode, ApiResponse, ApiSuccess } from '@kpanah/shared';
+import type { ApiError, ApiErrorCode, ApiResponse, ApiSuccess } from '@llwa/shared';
 import type { Env } from '../types';
 import { isEncryptionEnabled } from '../config';
 

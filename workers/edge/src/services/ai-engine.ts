@@ -21,7 +21,7 @@ import {
   type LessonSkeleton,
   type CycleOutline,
   type OutlineDay,
-} from '@kpanah/shared';
+} from '@llwa/shared';
 import type { Env } from '../types';
 import { resolveProviderKey, FROM_ENV_MARKER } from '../lib/provider-vault';
 

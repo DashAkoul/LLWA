@@ -24,7 +24,7 @@ fi
 
 mkdir -p backups
 stamp=$(date +%Y%m%d-%H%M)
-out="backups/kpanah-${stamp}.sql.gz"
+out="backups/llwa-${stamp}.sql.gz"
 
 echo "→ dumping to ${out} ..."
 pg_dump --no-owner --no-privileges --clean --if-exists "$SUPABASE_DB_URL" | gzip -9 > "$out"

@@ -1,4 +1,4 @@
-import { PROMPT_INJECTION_PATTERNS, SECURITY } from '@kpanah/shared';
+import { PROMPT_INJECTION_PATTERNS, SECURITY } from '@llwa/shared';
 
 /**
  * Content filtering — before any user-supplied text reaches the AI.

@@ -1,4 +1,4 @@
-import { SYSTEM_RULES_VERSION } from '@kpanah/shared';
+import { SYSTEM_RULES_VERSION } from '@llwa/shared';
 import type {
   DecisionRecord,
   StageObjective,
@@ -6,7 +6,7 @@ import type {
   LearningMap,
   MapStage,
   StageCriteria,
-} from '@kpanah/shared';
+} from '@llwa/shared';
 
 /** حداکثر تصمیم‌های نگه‌داری‌شده در نقشه (جلوگیری از رشد بی‌پایان) */
 const MAX_DECISIONS = 200;

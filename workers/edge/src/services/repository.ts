@@ -17,7 +17,7 @@ import type {
   QualitativeSkill,
   TermCard,
   LearningMap,
-} from '@kpanah/shared';
+} from '@llwa/shared';
 import {
   CYCLE_LENGTH_DAYS,
   PLAN_DURATION_DAYS,
@@ -28,7 +28,7 @@ import {
   evaluateAccess,
   lessonKindForDay,
   shouldGenerateNextCycle,
-} from '@kpanah/shared';
+} from '@llwa/shared';
 import { SupabaseClient, SupabaseError } from './supabase';
 import type { AiProviderRow } from './ai-engine';
 import type { Env } from '../types';
@@ -42,13 +42,18 @@ import type { Env } from '../types';
 
 export interface UserRow {
   id: string;
-  telegram_id: number;
+  /** ⚠️ برای کاربران اپ موبایل (ورود با گوگل) `null` است */
+  telegram_id: number | null;
+  /** شناسهٔ گوگل (sub) — یکتا */
+  google_sub?: string | null;
+  email?: string | null;
+  auth_provider?: 'GOOGLE' | 'TELEGRAM' | null;
   username: string | null;
   first_name: string | null;
   last_name: string | null;
   photo_url: string | null;
   ui_language: string | null;
-  language_source: 'TELEGRAM' | 'MANUAL';
+  language_source: 'TELEGRAM' | 'MANUAL' | 'GOOGLE';
   target_language: string;
   skill_level: string;
   learning_goal: string | null;
@@ -166,6 +171,94 @@ export class ContentRepository {
       const row = await this.db.select<UserRow>(
         'users',
         { telegram_id: `eq.${telegramId}`, select: '*' },
+        { single: true }
+      );
+      return (row as UserRow | null) ?? null;
+    } catch (err) {
+      if (err instanceof SupabaseError && err.isNotFound) return null;
+      throw err;
+    }
+  }
+
+  /** خواندن کاربر با UUID داخلی — هویت اصلی در اپ موبایل */
+  async findUserByGoogleSub(sub: string): Promise<UserRow | null> {
+    try {
+      const row = await this.db.select<UserRow>(
+        'users',
+        { google_sub: `eq.${sub}`, select: '*' },
+        { single: true }
+      );
+      return (row as UserRow | null) ?? null;
+    } catch (err) {
+      if (err instanceof SupabaseError && err.isNotFound) return null;
+      throw err;
+    }
+  }
+
+  /**
+   * ساخت/به‌روزرسانی کاربر بر اساس هویت گوگل.
+   *
+   * منطق تطبیق:
+   *  ۱. با `google_sub` بگرد (کاربر بازگشتی).
+   *  ۲. اگر نبود، با `email` بگرد و حساب قدیمیِ تلگرامی را به گوگل وصل کن
+   *     (تا کاربری که قبلاً از ربات آمده پیشرفت‌اش را از دست ندهد).
+   *  ۳. اگر هیچ‌کدام نبود، کاربر جدید بساز.
+   */
+  async upsertUserByGoogle(input: {
+    sub: string;
+    email: string;
+    firstName: string;
+    lastName?: string | null;
+    photoUrl?: string | null;
+    uiLanguage: string;
+  }): Promise<UserRow> {
+    const existing =
+      (await this.findUserByGoogleSub(input.sub)) ??
+      (await this.findUserByEmail(input.email));
+
+    if (existing) {
+      const patch: Record<string, unknown> = {
+        google_sub: input.sub,
+        email: input.email,
+        auth_provider: 'GOOGLE',
+        first_name: input.firstName,
+        last_name: input.lastName ?? null,
+        photo_url: input.photoUrl ?? null,
+      };
+      // زبان را فقط اگر کاربر دستی انتخاب نکرده باشد از گوگل می‌گیریم
+      if (existing.language_source !== 'MANUAL') {
+        patch.ui_language = input.uiLanguage;
+        patch.language_source = 'GOOGLE';
+      }
+      return (await this.db.update<UserRow>(
+        'users',
+        { id: existing.id },
+        patch,
+        { single: true }
+      ))!;
+    }
+
+    const created = await this.db.insert<UserRow>('users', {
+      google_sub: input.sub,
+      email: input.email,
+      auth_provider: 'GOOGLE',
+      first_name: input.firstName,
+      last_name: input.lastName ?? null,
+      photo_url: input.photoUrl ?? null,
+      ui_language: input.uiLanguage,
+      language_source: 'GOOGLE',
+      skill_level: 'ZERO',
+      onboarding_done: false,
+    });
+
+    return created as UserRow;
+  }
+
+  async findUserByEmail(email: string): Promise<UserRow | null> {
+    try {
+      const row = await this.db.select<UserRow>(
+        'users',
+        { email: `eq.${email}`, select: '*' },
         { single: true }
       );
       return (row as UserRow | null) ?? null;
@@ -2517,7 +2610,11 @@ export function toUserProfile(
 
   return {
     id: user.id,
-    telegramId: user.telegram_id,
+    telegramId: user.telegram_id ?? null,
+    email: user.email ?? null,
+    authProvider: (user.auth_provider ?? (user.telegram_id ? 'TELEGRAM' : 'GOOGLE')) as
+      | 'GOOGLE'
+      | 'TELEGRAM',
     firstName: user.first_name,
     lastName: user.last_name,
     username: user.username,

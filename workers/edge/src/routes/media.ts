@@ -31,7 +31,7 @@ import { SupabaseClient } from '../services/supabase';
  */
 
 /** آدرس پایهٔ همهٔ routeهای رسانه */
-const MEDIA_BASE = '/kpanah56/8fjg7rfb/v1/media';
+const MEDIA_BASE = '/llwa74/9xkr2mqv/v1/media';
 
 export function isMediaRequest(url: URL): { route: 'speak' | 'file'; key?: string } | null {
   if (!url.pathname.startsWith(MEDIA_BASE)) return null;

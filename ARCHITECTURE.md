@@ -29,7 +29,7 @@
 ## ۳. ساختار Monorepo
 
 ```
-kpanah-lang-platform/
+llwa-platform/
 ├── apps/
 │   └── tma/                    # Telegram Mini App (React + TS + Vite)
 ├── workers/
@@ -53,7 +53,7 @@ Telegram Client
    │  initData (signed) + JWT
    ▼
 TMA (React SPA, Vercel/CF Pages)
-   │  POST /kpanah56/8fjg7rfb/v1/gate?action=...
+   │  POST /llwa74/9xkr2mqv/v1/gate?action=...
    ▼
 Cloudflare Worker (Edge Gateway)
    ├─ 1. Rate limit (KV / Durable Object)

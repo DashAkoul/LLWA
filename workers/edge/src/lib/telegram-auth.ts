@@ -10,8 +10,8 @@
  *   valid  ⟺  HMAC_SHA256(data_check_string, secret_key) === hash
  */
 
-import type { TelegramUser } from '@kpanah/shared';
-import { telegramInitDataUserSchema } from '@kpanah/shared';
+import type { TelegramUser } from '@llwa/shared';
+import { telegramInitDataUserSchema } from '@llwa/shared';
 
 export interface InitDataValidationOptions {
   /** حداکثر عمر مجاز initData به ثانیه (پیش‌فرض ۲۴ ساعت) */

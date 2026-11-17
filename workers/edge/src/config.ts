@@ -23,7 +23,7 @@ export const DEFAULT_ENV: Partial<Env> = {
   PERSONALIZED_CACHE: 'true',
   /** تولید دو مرحله‌ای درس (اسکلت → جزئیات از کش سطح واژه) */
   TWO_STAGE_LESSON: 'true',
-  GATE_PATH: '/kpanah56/8fjg7rfb/v1/gate',
+  GATE_PATH: '/llwa74/9xkr2mqv/v1/gate',
 };
 
 export function withDefaults(env: Env): Env {

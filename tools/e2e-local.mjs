@@ -30,7 +30,7 @@ const arg = (n, d) => { const i = argv.indexOf(`--${n}`); return i !== -1 && arg
 const has = (n) => argv.includes(`--${n}`);
 
 const BASE = (arg('base', 'http://127.0.0.1:8787')).replace(/\/$/, '');
-const GATE = '/kpanah56/8fjg7rfb/v1/gate';
+const GATE = '/llwa74/9xkr2mqv/v1/gate';
 const TEST_ID = Number(arg('id', '777000999'));
 
 function readEnv(path, key) {
